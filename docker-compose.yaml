@@ -1,0 +1,47 @@
+version: "3.9"
+
+networks:
+  diligent:
+    driver: bridge
+
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - diligent
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/grafana/dashboards
+    networks:
+      - diligent
+
+  minion0:
+    build:
+      context: .
+      dockerfile: Minion.Dockerfile
+    image: diligent/minion:latest
+    ports:
+      - 9119:9119
+      - 2112:2112
+    networks:
+      - diligent
+
+  shell:
+    build:
+      context: .
+      dockerfile: Shell.Dockerfile
+    image: diligent/shell:latest
+    stdin_open: true
+    tty: true
+    networks:
+      - diligent
+

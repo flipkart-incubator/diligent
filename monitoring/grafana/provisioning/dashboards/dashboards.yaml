@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: diligent
+    folder: diligent
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /grafana/dashboards

@@ -1,0 +1,157 @@
+syntax = "proto3";
+
+package proto;
+
+service Minion {
+  // Ping
+  rpc Ping (PingRequest) returns (PingResponse);
+
+  // Dataspec Related
+  rpc LoadDataSpec (LoadDataSpecRequest) returns (LoadDataSpecResponse);
+  rpc GetDataSpecInfo (GetDataSpecInfoRequest) returns (GetDataSpecInfoResponse);
+
+  // DB Connection Related
+  rpc OpenDBConnection (OpenDBConnectionRequest) returns (OpenDBConnectionResponse);
+  rpc GetDBConnectionInfo (GetDBConnectionInfoRequest) returns (GetDBConnectionInfoResponse);
+  rpc CloseDBConnection (CloseDBConnectionRequest) returns (CloseDBConnectionResponse);
+
+  // Workload Related
+  rpc RunWorkload (RunWorkloadRequest) returns (RunWorkloadResponse);
+  rpc GetWorkloadInfo (GetWorkloadInfoRequest) returns (GetWorkloadInfoResponse);
+  rpc StopWorkload (StopWorkloadRequest) returns (StopWorkloadResponse);
+}
+
+message PingRequest {
+  int32 nonce = 1;
+}
+
+message PingResponse {
+  int32 nonce = 1;
+}
+
+message DataSpec {
+  string spec_type = 1;
+  int32 version = 2;
+  int32 record_size = 3;
+  KeyGenSpec key_gen_spec = 4;
+  TrSpec uniq_tr_spec = 5;
+  TrSpec small_grp_tr_spec = 6;
+  TrSpec large_grp_tr_spec = 7;
+  string fixed_value = 8;
+}
+
+message KeyGenSpec {
+  repeated int32 level_sizes = 1;
+  repeated string sub_keys = 2;
+  string delim = 3;
+}
+
+message TrSpec {
+  string inputs = 1;
+  string replacements = 2;
+}
+
+message DataSpecInfo {
+  string spec_name = 1;
+  string spec_type = 2;
+  int32 version = 3;
+  int32 num_recs = 4;
+  int32 record_size = 5;
+  int32 hash = 6;
+}
+
+message LoadDataSpecRequest {
+  string spec_name = 1;
+  DataSpec data_spec = 2;
+  int32 hash = 3;
+}
+
+
+message LoadDataSpecResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+  DataSpecInfo data_spec_info = 3;
+}
+
+message GetDataSpecInfoRequest {
+}
+
+message GetDataSpecInfoResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+  DataSpecInfo data_spec_info = 3;
+}
+
+message OpenDBConnectionRequest {
+  string driver = 1;
+  string url = 2;
+}
+
+message OpenDBConnectionResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}
+
+message GetDBConnectionInfoRequest {
+}
+
+message GetDBConnectionInfoResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+  string driver = 3;
+  string url = 4;
+}
+
+message CloseDBConnectionRequest {
+}
+
+message CloseDBConnectionResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}
+
+message RunWorkloadRequest {
+  string workload_name = 1;
+  Range assigned_range = 2;
+  string table_name = 3;
+  int32 duration_sec = 4;
+  int32 concurrency = 5;
+  int32 batch_size = 6;
+}
+
+message Range {
+  int32 start = 1;
+  int32 limit = 2;
+}
+
+message RunWorkloadResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}
+
+message GetWorkloadInfoRequest {
+}
+
+message GetWorkloadInfoResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+  WorkloadInfo workload_info = 3;
+}
+
+message WorkloadInfo {
+  string workload_name = 1;
+  Range assigned_range = 2;
+  string table_name = 3;
+  int32 duration_sec = 4;
+  int32 concurrency = 5;
+  int32 batch_size = 6;
+  bool isRunning = 7;
+}
+
+message StopWorkloadRequest {
+}
+
+message StopWorkloadResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}

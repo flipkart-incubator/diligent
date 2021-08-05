@@ -1,0 +1,9 @@
+global:
+  # How frequently to scrape targets by default.
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "diligent"
+    static_configs:
+    - targets:
+      - 'minion0:2112'
