@@ -119,7 +119,7 @@ func wlRun(c *grumble.Context) error {
 	success := 0
 	server := 0
 	for minAddr, minClient := range controllerApp.minions.minions {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, _ := context.WithTimeout(context.Background(), 10 * time.Second)
 		request := &proto.RunWorkloadRequest{
 			WorkloadName: workloadName,
 			AssignedRange: proto.RangeToProto(assignedRanges[server]),
