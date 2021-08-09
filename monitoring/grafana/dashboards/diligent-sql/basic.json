@@ -8,6 +8,12 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
@@ -20,6 +26,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -37,10 +47,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -67,7 +73,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -89,7 +95,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "diligent_sql_basic_config_concurrency",
+          "expr": "sum(diligent_sql_basic_config_concurrency)",
           "interval": "",
           "legendFormat": "Configured Concurrency",
           "queryType": "randomWalk",
@@ -97,7 +103,7 @@
         },
         {
           "exemplar": true,
-          "expr": "diligent_sql_basic_concurrency",
+          "expr": "sum(diligent_sql_basic_concurrency)",
           "hide": false,
           "interval": "",
           "legendFormat": "Actual Concurrency",
@@ -155,10 +161,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -185,7 +187,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -198,7 +200,7 @@
           "exemplar": true,
           "expr": "diligent_sql_basic_config_transactions_enabled",
           "interval": "",
-          "legendFormat": "Transactions Enabled",
+          "legendFormat": "Transactions Enabled-{{instance}}",
           "queryType": "randomWalk",
           "refId": "A"
         }
@@ -253,10 +255,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -283,7 +281,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -296,7 +294,7 @@
           "exemplar": true,
           "expr": "diligent_sql_basic_config_operations_per_transaction",
           "interval": "",
-          "legendFormat": "Configured Batch Size",
+          "legendFormat": "Configured Batch Size-{{instance}}",
           "queryType": "randomWalk",
           "refId": "A"
         }
@@ -351,10 +349,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -381,7 +375,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -394,13 +388,15 @@
           "exemplar": true,
           "expr": "diligent_sql_basic_db_connections",
           "interval": "",
-          "legendFormat": "{{label}}",
+          "legendFormat": "{{label}}-{{instance}}",
           "queryType": "randomWalk",
           "refId": "A"
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "DB Connections",
       "tooltip": {
         "shared": true,
@@ -443,6 +439,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -460,10 +460,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -490,7 +486,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -557,10 +553,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -587,7 +579,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -654,10 +646,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -684,7 +672,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -763,10 +751,6 @@
       "dashes": false,
       "datasource": "diligent-prometheus",
       "description": "",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -793,7 +777,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -867,10 +851,6 @@
       "dashes": false,
       "datasource": "diligent-prometheus",
       "description": "",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -897,7 +877,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -966,10 +946,6 @@
       "dashes": false,
       "datasource": "diligent-prometheus",
       "description": "",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -996,7 +972,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1007,7 +983,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(diligent_sql_basic_statement_duration_seconds_sum[1m]) / rate(diligent_sql_basic_statement_duration_seconds_count[1m]) ",
+          "expr": "(sum by (statement) (rate(diligent_sql_basic_statement_duration_seconds_sum[1m]))) / (sum by (statement) (rate(diligent_sql_basic_statement_duration_seconds_count[1m])))",
           "instant": false,
           "interval": "",
           "legendFormat": "{{statement}}",
@@ -1061,6 +1037,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1078,10 +1058,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1108,7 +1084,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1175,10 +1151,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1205,7 +1177,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1260,7 +1232,7 @@
         },
         {
           "exemplar": true,
-          "expr": "(rate(diligent_sql_basic_transaction_duration_seconds_sum[1m])) / (rate(diligent_sql_basic_transaction_duration_seconds_count[1m])) ",
+          "expr": "(sum (rate(diligent_sql_basic_transaction_duration_seconds_sum[1m]))) / (sum (rate(diligent_sql_basic_transaction_duration_seconds_count[1m])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Mean",
@@ -1317,10 +1289,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "diligent-prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1347,7 +1315,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.2",
+      "pluginVersion": "8.1.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1465,14 +1433,14 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 27,
+  "schemaVersion": 30,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-2h",
     "to": "now"
   },
   "timepicker": {},
