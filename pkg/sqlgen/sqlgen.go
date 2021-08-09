@@ -40,7 +40,7 @@ func (sqlg *SqlGen) SelectByPkStatement(n int) string {
 
 func (sqlg *SqlGen) SelectByUkStatement(n int) string {
 	stmt := fmt.Sprintf("SELECT pk, uniq, small_grp, large_grp, fixed_val, seq_num, ts, payload FROM %s where uniq='%s'",
-		sqlg.table, sqlg.dg.Key(n))
+		sqlg.table, sqlg.dg.Uniq(n))
 	return stmt
 }
 
