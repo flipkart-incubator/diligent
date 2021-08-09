@@ -22,11 +22,11 @@ func NewSelectByPkTxnWorkload(assignedRange *intgen.Range, rp *RunParams) *Workl
 }
 
 func NewSelectByUkRowWorkload(assignedRange *intgen.Range, rp *RunParams) *Workload {
-	return makeWorkload("select-uk-row-rand", assignedRange, Shared, rp, NewSelectByPkRowWork)
+	return makeWorkload("select-uk-row-rand", assignedRange, Shared, rp, NewSelectByUkRowWork)
 }
 
 func NewSelectByUkTxnWorkload(assignedRange *intgen.Range, rp *RunParams) *Workload {
-	return makeWorkload("select-uk-txn-rand", assignedRange, Shared, rp, NewSelectByPkTxnWork)
+	return makeWorkload("select-uk-txn-rand", assignedRange, Shared, rp, NewSelectByUkTxnWork)
 }
 
 func NewUpdateRowWorkload(assignedRange *intgen.Range, rp *RunParams) *Workload {
