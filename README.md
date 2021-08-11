@@ -11,13 +11,9 @@ There are several benchmark definitions and benchmarking tools out there such as
 
 Diligent was created to address these needs and more.
 
-Currently Diligent works with MySQL compatible databases only. We will be extending it to support PostgreSQL compatible databases as well.
+Currently Diligent works with MySQL compatible databases only. We have plans to support PostgreSQL compatible databases in the near future.
 
-Diligent may be able to help you answer some such questions about your SQL DB that is harder to do with other tools. Hope you find it useful!
+To get started with using Diligent, please refer to the documentation in the accompanying [Wiki](https://github.com/flipkart-incubator/diligent/wiki)
 
-# Getting started with Diligent
+Hope you find Diligent useful!
 
-More information on Diligent is available in the accompanying [Wiki](https://github.com/flipkart-incubator/diligent/wiki)
-- To know more about the capabilities that Diligent offers, read the [Wiki Home Page](https://github.com/flipkart-incubator/diligent/wiki)
-- To familiarize yourself with the key concepts related to Diligent, read the [Concepts Page](https://github.com/flipkart-incubator/diligent/wiki/Concepts)
-- To see how to put Diligent in action read the [Quick Start Example Page](https://github.com/flipkart-incubator/diligent/wiki/Quick-Start-Example)
