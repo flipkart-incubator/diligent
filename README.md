@@ -1,4 +1,4 @@
-# Diligent
+# What is Diligent?
 
 Diligent is a tool we created at Flipkart for generating workloads for our SQL databases that enables us to answer specific questions about the performance of the database.
 
