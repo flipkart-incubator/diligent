@@ -1,5 +1,5 @@
 # Configure targets
-.PHONY: compile clean test start-minion stop-minion start
+.PHONY: compile clean test start-minion stop-minion start docker
 default: compile
 
 BUILD_DIR = ./build
@@ -40,3 +40,14 @@ start-shell:
 
 start:
 	@bash -c "$(MAKE) clean compile start-minion start-shell stop-minion"
+
+docker-minion:
+    @docker build . -f Minion.Dockerfile -t diligent-minion:latest
+
+docker-boss:
+    @docker build . -f Boss.Dockerfile -t diligent-boss:latest
+
+docker-shell:
+    @docker build . -f Shell.Dockerfile -t diligent-shell:latest
+
+docker: docker-minion docker-shell docker-boss

@@ -1,0 +1,31 @@
+# A Replicaset for boss
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: boss
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: diligent-boss
+  template:
+    metadata:
+      labels:
+        app: diligent-boss
+    spec:
+      containers:
+        - name: diligent-boss
+          image: <REF>
+---
+# A Nodeport service for boss
+apiVersion: v1
+kind: Service
+metadata:
+  name: boss
+spec:
+  type: NodePort
+  ports:
+    - port: 9190
+      targetPort: 9190
+  selector:
+    app: diligent-boss

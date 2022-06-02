@@ -1,0 +1,46 @@
+# A Headless service for minions
+apiVersion: v1
+kind: Service
+metadata:
+  name: minion
+spec:
+  clusterIP: None
+  ports:
+    - port: 9191
+      targetPort: 9191
+  selector:
+    app: diligent-minion
+---
+# A Statefulset for minions
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minions
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: diligent-minion
+  serviceName: minion
+  template:
+    metadata:
+      labels:
+        app: diligent-minion
+    spec:
+      containers:
+        - name: diligent-minion
+          image: <REF>
+          command: ["/diligent/minion"]
+          args: ["--bossUrl", "boss:9190", "--advertiseUrl", "$(MY_POD_NAME).$(HEADLESS_SERVICE_NAME).$(MY_POD_NAMESPACE).svc"]
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HEADLESS_SERVICE_NAME
+              value: minion
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+

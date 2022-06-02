@@ -45,9 +45,11 @@ type WorkloadContext struct {
 type MinionServer struct {
 	proto.UnimplementedMinionServer
 
-	host        string
-	grpcPort    string
-	metricsPort string
+	host         string
+	grpcPort     string
+	metricsPort  string
+	bossUrl      string
+	advertiseUrl string
 
 	mut      *sync.Mutex
 	data     *DataContext
@@ -56,11 +58,13 @@ type MinionServer struct {
 	metrics  *metrics.DiligentMetrics
 }
 
-func NewMinionServer(host string, grpcPort, metricsPort string) *MinionServer {
+func NewMinionServer(host, grpcPort, metricsPort, bossUrl, advertiseUrl string) *MinionServer {
 	return &MinionServer{
-		host:        host,
-		grpcPort:    grpcPort,
-		metricsPort: metricsPort,
+		host:         host,
+		grpcPort:     grpcPort,
+		metricsPort:  metricsPort,
+		bossUrl:      bossUrl,
+		advertiseUrl: advertiseUrl,
 
 		mut:      &sync.Mutex{},
 		data:     nil,
@@ -68,6 +72,32 @@ func NewMinionServer(host string, grpcPort, metricsPort string) *MinionServer {
 		workload: nil,
 		metrics:  nil,
 	}
+}
+
+func (s *MinionServer) RegisterWithBoss() error {
+	var conn *grpc.ClientConn
+	var ctx context.Context
+	var err error
+	for {
+		ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+		conn, err = grpc.DialContext(ctx, s.bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			log.Errorf("failed to connect to boss %s (%v)", s.bossUrl, err)
+			continue
+		} else {
+			break
+		}
+	}
+	bossClient := proto.NewBossClient(conn)
+
+	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	_, err = bossClient.MinionRegister(ctx, &proto.MinionRegisterRequest{Url: s.advertiseUrl})
+	if err != nil {
+		log.Errorf("Registration failed with error: (%v)\n", err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *MinionServer) Serve() error {

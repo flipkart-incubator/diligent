@@ -1,11 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/desertbit/grumble"
 	"github.com/flipkart-incubator/diligent/pkg/datagen"
-	"github.com/flipkart-incubator/diligent/pkg/proto"
 	"strings"
 )
 
@@ -45,24 +43,24 @@ func init() {
 	}
 	dsCmd.AddCommand(dsDescCmd)
 
-	dsLoadCmd := &grumble.Command{
-		Name:    "load",
-		Help:    "load a data spec for use",
-		Aliases: []string{"lo"},
-		Args: func(a *grumble.Args) {
-			a.String("name", "name of the data spec", grumble.Default(""))
-		},
-		Run: dsLoad,
-	}
-	dsCmd.AddCommand(dsLoadCmd)
-
-	dsShowCmd := &grumble.Command{
-		Name:    "show",
-		Help:    "show the currently loaded dataspec",
-		Aliases: []string{"sh"},
-		Run: dsShow,
-	}
-	dsCmd.AddCommand(dsShowCmd)
+	//dsLoadCmd := &grumble.Command{
+	//	Name:    "load",
+	//	Help:    "load a data spec for use",
+	//	Aliases: []string{"lo"},
+	//	Args: func(a *grumble.Args) {
+	//		a.String("name", "name of the data spec", grumble.Default(""))
+	//	},
+	//	Run: dsLoad,
+	//}
+	//dsCmd.AddCommand(dsLoadCmd)
+	//
+	//dsShowCmd := &grumble.Command{
+	//	Name:    "show",
+	//	Help:    "show the currently loaded dataspec",
+	//	Aliases: []string{"sh"},
+	//	Run: dsShow,
+	//}
+	//dsCmd.AddCommand(dsShowCmd)
 }
 
 func dsCreate(c *grumble.Context) error {
@@ -115,84 +113,84 @@ func dsDesc(c *grumble.Context) error {
 	return nil
 }
 
-func dsLoad(c *grumble.Context) error {
-	// File name validation and enhancement
-	name := c.Args.String("name")
-	if name == "" {
-		return fmt.Errorf("please specify a name for the dataspec")
-	}
-	if !strings.HasSuffix(name, ".json") {
-		name = name + ".json"
-	}
-
-	// Load dataSpec
-	c.App.Println("Loading data spec from file:", name)
-	spec, err := datagen.LoadSpecFromFile(name)
-	if err != nil {
-		return err
-	}
-	controllerApp.data.dataSpec = spec
-	controllerApp.data.dataSpecName = name
-	controllerApp.data.dataGen = datagen.NewDataGen(spec)
-
-	// Transfer dataSpec
-	success := 0
-	for minAddr, minClient := range controllerApp.minions.minions {
-		request := &proto.LoadDataSpecRequest {
-			SpecName: name,
-			DataSpec: proto.DataSpecToProto(spec),
-			Hash:     0,
-		}
-		response, err := minClient.LoadDataSpec(context.Background(), request)
-		if err != nil {
-			c.App.Printf("%s: Request failed (%v)\n", minAddr, err)
-			continue
-		}
-		if !response.GetIsOk() {
-			c.App.Printf("%s: Failed (%s)\n", minAddr, response.GetFailureReason())
-			continue
-		}
-		c.App.Printf("%s: OK\n", minAddr)
-		success++
-	}
-	c.App.Printf("Successful on %d/%d minions\n", success, len(controllerApp.minions.minions))
-	return nil
-}
-
-func dsShow(c *grumble.Context) error {
-	if controllerApp.data.dataSpec == nil {
-		return fmt.Errorf("no dataspec is currently loaded. Use the 'dataspec load' command to load one")
-	}
-
-	localInfo := fmt.Sprintf("Name=%s, Type=%s, Version=%d, NumRecs=%d, RecSize=%d",
-		controllerApp.data.dataSpecName,
-		controllerApp.data.dataSpec.SpecType,
-		controllerApp.data.dataSpec.Version,
-		controllerApp.data.dataSpec.KeyGenSpec.NumKeys(),
-		controllerApp.data.dataSpec.RecordSize)
-	c.App.Printf("Expected: %s\n", localInfo)
-	success := 0
-	for minAddr, minClient := range controllerApp.minions.minions {
-		// TODO: Add validations on returned info
-		request := &proto.GetDataSpecInfoRequest{}
-		response, err := minClient.GetDataSpecInfo(context.Background(), request)
-		if err != nil {
-			c.App.Printf("%s: Request failed (%v)\n", minAddr, err)
-			continue
-		}
-		if !response.GetIsOk() {
-			c.App.Printf("%s: Failed! (%s)\n", minAddr, response.GetFailureReason())
-			continue
-		}
-		info := fmt.Sprintf("Name=%s, Type=%s, Version=%d, NumRecs=%d, RecSize=%d",
-			response.GetDataSpecInfo().GetSpecName(),
-			response.GetDataSpecInfo().GetSpecType(),
-			response.GetDataSpecInfo().GetVersion(),
-			response.GetDataSpecInfo().GetNumRecs(),
-			response.GetDataSpecInfo().GetRecordSize())
-		c.App.Printf("%s: %s\n", minAddr, info)
-		success++
-	}
-	c.App.Printf("Successful on %d/%d minions\n", success, len(controllerApp.minions.minions))
-	return nil
-}
+//func dsLoad(c *grumble.Context) error {
+//	// File name validation and enhancement
+//	name := c.Args.String("name")
+//	if name == "" {
+//		return fmt.Errorf("please specify a name for the dataspec")
+//	}
+//	if !strings.HasSuffix(name, ".json") {
+//		name = name + ".json"
+//	}
+//
+//	// Load dataSpec
+//	c.App.Println("Loading data spec from file:", name)
+//	spec, err := datagen.LoadSpecFromFile(name)
+//	if err != nil {
+//		return err
+//	}
+//	controllerApp.data.dataSpec = spec
+//	controllerApp.data.dataSpecName = name
+//	controllerApp.data.dataGen = datagen.NewDataGen(spec)
+//
+//	// Transfer dataSpec
+//	success := 0
+//	for minAddr, minClient := range controllerApp.minions.minions {
+//		request := &proto.LoadDataSpecRequest {
+//			SpecName: name,
+//			DataSpec: proto.DataSpecToProto(spec),
+//			Hash:     0,
+//		}
+//		response, err := minClient.LoadDataSpec(context.Background(), request)
+//		if err != nil {
+//			c.App.Printf("%s: Request failed (%v)\n", minAddr, err)
+//			continue
+//		}
+//		if !response.GetIsOk() {
+//			c.App.Printf("%s: Failed (%s)\n", minAddr, response.GetFailureReason())
+//			continue
+//		}
+//		c.App.Printf("%s: OK\n", minAddr)
+//		success++
+//	}
+//	c.App.Printf("Successful on %d/%d minions\n", success, len(controllerApp.minions.minions))
+//	return nil
+//}
+//
+//func dsShow(c *grumble.Context) error {
+//	if controllerApp.data.dataSpec == nil {
+//		return fmt.Errorf("no dataspec is currently loaded. Use the 'dataspec load' command to load one")
+//	}
+//
+//	localInfo := fmt.Sprintf("Name=%s, Type=%s, Version=%d, NumRecs=%d, RecSize=%d",
+//		controllerApp.data.dataSpecName,
+//		controllerApp.data.dataSpec.SpecType,
+//		controllerApp.data.dataSpec.Version,
+//		controllerApp.data.dataSpec.KeyGenSpec.NumKeys(),
+//		controllerApp.data.dataSpec.RecordSize)
+//	c.App.Printf("Expected: %s\n", localInfo)
+//	success := 0
+//	for minAddr, minClient := range controllerApp.minions.minions {
+//		// TODO: Add validations on returned info
+//		request := &proto.GetDataSpecInfoRequest{}
+//		response, err := minClient.GetDataSpecInfo(context.Background(), request)
+//		if err != nil {
+//			c.App.Printf("%s: Request failed (%v)\n", minAddr, err)
+//			continue
+//		}
+//		if !response.GetIsOk() {
+//			c.App.Printf("%s: Failed! (%s)\n", minAddr, response.GetFailureReason())
+//			continue
+//		}
+//		info := fmt.Sprintf("Name=%s, Type=%s, Version=%d, NumRecs=%d, RecSize=%d",
+//			response.GetDataSpecInfo().GetSpecName(),
+//			response.GetDataSpecInfo().GetSpecType(),
+//			response.GetDataSpecInfo().GetVersion(),
+//			response.GetDataSpecInfo().GetNumRecs(),
+//			response.GetDataSpecInfo().GetRecordSize())
+//		c.App.Printf("%s: %s\n", minAddr, info)
+//		success++
+//	}
+//	c.App.Printf("Successful on %d/%d minions\n", success, len(controllerApp.minions.minions))
+//	return nil
+//}

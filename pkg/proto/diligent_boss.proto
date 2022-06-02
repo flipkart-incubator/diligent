@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "./proto";
+
+service Boss {
+  // Ping
+  rpc Ping (BossPingRequest) returns (BossPingResponse);
+
+  // Minions Management
+  rpc MinionRegister (MinionRegisterRequest) returns (MinionRegisterResponse);
+  rpc MinionUnregister (MinionUnregisterRequest) returns (MinionUnregisterResponse);
+  rpc MinionShow (MinionShowRequest) returns (MinionShowResponse);
+}
+
+message BossPingRequest {
+}
+
+message BossPingResponse {
+}
+
+message MinionRegisterRequest{
+  string url = 1;
+}
+
+message MinionRegisterResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}
+
+message MinionUnregisterRequest {
+  string url = 1;
+}
+
+message MinionUnregisterResponse {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}
+
+message MinionShowRequest {
+}
+
+message MinionShowResponse {
+  repeated MinionStatus minions = 2;
+}
+
+message MinionStatus {
+  string url = 1;
+  bool is_reachable = 2;
+}
+
