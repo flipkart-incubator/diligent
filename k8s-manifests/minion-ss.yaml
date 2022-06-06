@@ -1,21 +1,8 @@
-# A Headless service for minions
-apiVersion: v1
-kind: Service
-metadata:
-  name: minion
-spec:
-  clusterIP: None
-  ports:
-    - port: 9191
-      targetPort: 9191
-  selector:
-    app: diligent-minion
----
 # A Statefulset for minions
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: minions
+  name: minion
 spec:
   replicas: 3
   selector:
@@ -29,9 +16,9 @@ spec:
     spec:
       containers:
         - name: diligent-minion
-          image: <REF>
+          image: asia-south1-docker.pkg.dev/experiments-007711/dev/minion:latest
           command: ["/diligent/minion"]
-          args: ["--boss", "boss:9190", "--advertiseHost", "$(MY_POD_NAME).$(HEADLESS_SERVICE_NAME).$(MY_POD_NAMESPACE).svc"]
+          args: ["--boss", "boss:5710", "--advertiseHost", "$(MY_POD_NAME).$(HEADLESS_SERVICE_NAME).$(MY_POD_NAMESPACE).svc"]
           env:
             - name: MY_POD_NAME
               valueFrom:
@@ -43,4 +30,3 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-

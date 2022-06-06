@@ -7,7 +7,7 @@ import (
 
 const (
 	defaultHost     = ""
-	defaultGrpcPort = ":9190"
+	defaultGrpcPort = ":5710"
 )
 
 func main() {

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-conf
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 5s
+    scrape_configs:
+      - job_name: 'diligent'
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_endpoints_name]
+          regex: 'minion'
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: instance
+          action: replace
+        - source_labels: [__address__]
+          regex: (.+):(.+)
+          target_label: __address__
+          replacement: $1:9090
+          action: replace

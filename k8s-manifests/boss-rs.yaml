@@ -15,17 +15,4 @@ spec:
     spec:
       containers:
         - name: diligent-boss
-          image: <REF>
----
-# A Nodeport service for boss
-apiVersion: v1
-kind: Service
-metadata:
-  name: boss
-spec:
-  type: NodePort
-  ports:
-    - port: 9190
-      targetPort: 9190
-  selector:
-    app: diligent-boss
+          image: asia-south1-docker.pkg.dev/experiments-007711/dev/boss:latest

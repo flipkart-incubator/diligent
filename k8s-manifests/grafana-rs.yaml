@@ -1,0 +1,47 @@
+# A ReplicaSet for grafana
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:8.5.4
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - mountPath: /var/lib/grafana
+              name: grafana-storage
+            - mountPath: /etc/grafana/provisioning/datasources
+              name: grafana-prov-datasources
+              readOnly: false
+            - mountPath: /etc/grafana/provisioning/dashboards
+              name: grafana-prov-dashboards
+              readOnly: false
+            - mountPath: /grafana/dashboards/diligent
+              name: grafana-diligent-dashboards
+              readOnly: false
+      volumes:
+        - name: grafana-storage
+          emptyDir: {}
+        - name: grafana-prov-datasources
+          configMap:
+            defaultMode: 420
+            name: grafana-prov-datasources
+        - name: grafana-prov-dashboards
+          configMap:
+            defaultMode: 420
+            name: grafana-prov-dashboards
+        - name: grafana-diligent-dashboards
+          configMap:
+            defaultMode: 420
+            name: grafana-diligent-dashboards

@@ -7,8 +7,8 @@ import (
 
 const (
 	defaultHost     = ""
-	defaultGrpcPort = ":9191"
-	defaultMetricsPort = ":2121"
+	defaultGrpcPort = ":5711"
+	defaultMetricsPort = ":9090"
 )
 
 func main() {

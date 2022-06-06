@@ -1,0 +1,13 @@
+# A Headless service for minions
+apiVersion: v1
+kind: Service
+metadata:
+  name: minion
+spec:
+  clusterIP: None
+  ports:
+    - port: 5711
+      targetPort: 5711
+  selector:
+    app: diligent-minion
+
