@@ -2,6 +2,7 @@ package keygen
 
 import "fmt"
 
+// LeveledKeyGen can generate the keys that belong to a Leveled Key Set
 type LeveledKeyGen struct {
 	subKeySets        [][]string
 	delim             string

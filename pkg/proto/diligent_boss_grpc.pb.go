@@ -25,9 +25,12 @@ type BossClient interface {
 	// Ping
 	Ping(ctx context.Context, in *BossPingRequest, opts ...grpc.CallOption) (*BossPingResponse, error)
 	// Minions Management
-	MinionRegister(ctx context.Context, in *MinionRegisterRequest, opts ...grpc.CallOption) (*MinionRegisterResponse, error)
-	MinionUnregister(ctx context.Context, in *MinionUnregisterRequest, opts ...grpc.CallOption) (*MinionUnregisterResponse, error)
-	MinionShow(ctx context.Context, in *MinionShowRequest, opts ...grpc.CallOption) (*MinionShowResponse, error)
+	RegisterMinion(ctx context.Context, in *BossRegisterMinionRequest, opts ...grpc.CallOption) (*BossRegisterMinionResponse, error)
+	UnregisterMinion(ctx context.Context, in *BossUnregisterMinonRequest, opts ...grpc.CallOption) (*BossUnregisterMinionResponse, error)
+	ShowMinions(ctx context.Context, in *BossShowMinionRequest, opts ...grpc.CallOption) (*BossShowMinionResponse, error)
+	// Workload Related
+	RunWorkload(ctx context.Context, in *BossRunWorkloadRequest, opts ...grpc.CallOption) (*BossRunWorkloadResponse, error)
+	StopWorkload(ctx context.Context, in *BossStopWorkloadRequest, opts ...grpc.CallOption) (*BossStopWorkloadResponse, error)
 }
 
 type bossClient struct {
@@ -47,27 +50,45 @@ func (c *bossClient) Ping(ctx context.Context, in *BossPingRequest, opts ...grpc
 	return out, nil
 }
 
-func (c *bossClient) MinionRegister(ctx context.Context, in *MinionRegisterRequest, opts ...grpc.CallOption) (*MinionRegisterResponse, error) {
-	out := new(MinionRegisterResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/MinionRegister", in, out, opts...)
+func (c *bossClient) RegisterMinion(ctx context.Context, in *BossRegisterMinionRequest, opts ...grpc.CallOption) (*BossRegisterMinionResponse, error) {
+	out := new(BossRegisterMinionResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/RegisterMinion", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *bossClient) MinionUnregister(ctx context.Context, in *MinionUnregisterRequest, opts ...grpc.CallOption) (*MinionUnregisterResponse, error) {
-	out := new(MinionUnregisterResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/MinionUnregister", in, out, opts...)
+func (c *bossClient) UnregisterMinion(ctx context.Context, in *BossUnregisterMinonRequest, opts ...grpc.CallOption) (*BossUnregisterMinionResponse, error) {
+	out := new(BossUnregisterMinionResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/UnregisterMinion", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *bossClient) MinionShow(ctx context.Context, in *MinionShowRequest, opts ...grpc.CallOption) (*MinionShowResponse, error) {
-	out := new(MinionShowResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/MinionShow", in, out, opts...)
+func (c *bossClient) ShowMinions(ctx context.Context, in *BossShowMinionRequest, opts ...grpc.CallOption) (*BossShowMinionResponse, error) {
+	out := new(BossShowMinionResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/ShowMinions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bossClient) RunWorkload(ctx context.Context, in *BossRunWorkloadRequest, opts ...grpc.CallOption) (*BossRunWorkloadResponse, error) {
+	out := new(BossRunWorkloadResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/RunWorkload", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bossClient) StopWorkload(ctx context.Context, in *BossStopWorkloadRequest, opts ...grpc.CallOption) (*BossStopWorkloadResponse, error) {
+	out := new(BossStopWorkloadResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/StopWorkload", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +102,12 @@ type BossServer interface {
 	// Ping
 	Ping(context.Context, *BossPingRequest) (*BossPingResponse, error)
 	// Minions Management
-	MinionRegister(context.Context, *MinionRegisterRequest) (*MinionRegisterResponse, error)
-	MinionUnregister(context.Context, *MinionUnregisterRequest) (*MinionUnregisterResponse, error)
-	MinionShow(context.Context, *MinionShowRequest) (*MinionShowResponse, error)
+	RegisterMinion(context.Context, *BossRegisterMinionRequest) (*BossRegisterMinionResponse, error)
+	UnregisterMinion(context.Context, *BossUnregisterMinonRequest) (*BossUnregisterMinionResponse, error)
+	ShowMinions(context.Context, *BossShowMinionRequest) (*BossShowMinionResponse, error)
+	// Workload Related
+	RunWorkload(context.Context, *BossRunWorkloadRequest) (*BossRunWorkloadResponse, error)
+	StopWorkload(context.Context, *BossStopWorkloadRequest) (*BossStopWorkloadResponse, error)
 	mustEmbedUnimplementedBossServer()
 }
 
@@ -94,14 +118,20 @@ type UnimplementedBossServer struct {
 func (UnimplementedBossServer) Ping(context.Context, *BossPingRequest) (*BossPingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedBossServer) MinionRegister(context.Context, *MinionRegisterRequest) (*MinionRegisterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MinionRegister not implemented")
+func (UnimplementedBossServer) RegisterMinion(context.Context, *BossRegisterMinionRequest) (*BossRegisterMinionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterMinion not implemented")
 }
-func (UnimplementedBossServer) MinionUnregister(context.Context, *MinionUnregisterRequest) (*MinionUnregisterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MinionUnregister not implemented")
+func (UnimplementedBossServer) UnregisterMinion(context.Context, *BossUnregisterMinonRequest) (*BossUnregisterMinionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnregisterMinion not implemented")
 }
-func (UnimplementedBossServer) MinionShow(context.Context, *MinionShowRequest) (*MinionShowResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MinionShow not implemented")
+func (UnimplementedBossServer) ShowMinions(context.Context, *BossShowMinionRequest) (*BossShowMinionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ShowMinions not implemented")
+}
+func (UnimplementedBossServer) RunWorkload(context.Context, *BossRunWorkloadRequest) (*BossRunWorkloadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunWorkload not implemented")
+}
+func (UnimplementedBossServer) StopWorkload(context.Context, *BossStopWorkloadRequest) (*BossStopWorkloadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopWorkload not implemented")
 }
 func (UnimplementedBossServer) mustEmbedUnimplementedBossServer() {}
 
@@ -134,56 +164,92 @@ func _Boss_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_MinionRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionRegisterRequest)
+func _Boss_RegisterMinion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossRegisterMinionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).MinionRegister(ctx, in)
+		return srv.(BossServer).RegisterMinion(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/MinionRegister",
+		FullMethod: "/proto.Boss/RegisterMinion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).MinionRegister(ctx, req.(*MinionRegisterRequest))
+		return srv.(BossServer).RegisterMinion(ctx, req.(*BossRegisterMinionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_MinionUnregister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionUnregisterRequest)
+func _Boss_UnregisterMinion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossUnregisterMinonRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).MinionUnregister(ctx, in)
+		return srv.(BossServer).UnregisterMinion(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/MinionUnregister",
+		FullMethod: "/proto.Boss/UnregisterMinion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).MinionUnregister(ctx, req.(*MinionUnregisterRequest))
+		return srv.(BossServer).UnregisterMinion(ctx, req.(*BossUnregisterMinonRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_MinionShow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionShowRequest)
+func _Boss_ShowMinions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossShowMinionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).MinionShow(ctx, in)
+		return srv.(BossServer).ShowMinions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/MinionShow",
+		FullMethod: "/proto.Boss/ShowMinions",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).MinionShow(ctx, req.(*MinionShowRequest))
+		return srv.(BossServer).ShowMinions(ctx, req.(*BossShowMinionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Boss_RunWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossRunWorkloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).RunWorkload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/RunWorkload",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).RunWorkload(ctx, req.(*BossRunWorkloadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Boss_StopWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossStopWorkloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).StopWorkload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/StopWorkload",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).StopWorkload(ctx, req.(*BossStopWorkloadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -200,16 +266,24 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Boss_Ping_Handler,
 		},
 		{
-			MethodName: "MinionRegister",
-			Handler:    _Boss_MinionRegister_Handler,
+			MethodName: "RegisterMinion",
+			Handler:    _Boss_RegisterMinion_Handler,
 		},
 		{
-			MethodName: "MinionUnregister",
-			Handler:    _Boss_MinionUnregister_Handler,
+			MethodName: "UnregisterMinion",
+			Handler:    _Boss_UnregisterMinion_Handler,
 		},
 		{
-			MethodName: "MinionShow",
-			Handler:    _Boss_MinionShow_Handler,
+			MethodName: "ShowMinions",
+			Handler:    _Boss_ShowMinions_Handler,
+		},
+		{
+			MethodName: "RunWorkload",
+			Handler:    _Boss_RunWorkload_Handler,
+		},
+		{
+			MethodName: "StopWorkload",
+			Handler:    _Boss_StopWorkload_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

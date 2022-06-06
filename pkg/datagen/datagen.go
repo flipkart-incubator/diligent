@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Record represents a single record with a fixed, well-defined set of fields
 type Record struct {
 	Pk         string
 	Uniq       string
@@ -21,6 +22,7 @@ type Record struct {
 	Payload    string
 }
 
+// DataGen can generate a bunch of data of type Record
 type DataGen struct {
 	recordSize  int
 	payloadSize int

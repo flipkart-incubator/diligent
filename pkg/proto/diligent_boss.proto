@@ -3,14 +3,20 @@ syntax = "proto3";
 package proto;
 option go_package = "./proto";
 
+import "diligent_common.proto";
+
 service Boss {
   // Ping
   rpc Ping (BossPingRequest) returns (BossPingResponse);
 
   // Minions Management
-  rpc MinionRegister (MinionRegisterRequest) returns (MinionRegisterResponse);
-  rpc MinionUnregister (MinionUnregisterRequest) returns (MinionUnregisterResponse);
-  rpc MinionShow (MinionShowRequest) returns (MinionShowResponse);
+  rpc RegisterMinion (BossRegisterMinionRequest) returns (BossRegisterMinionResponse);
+  rpc UnregisterMinion (BossUnregisterMinonRequest) returns (BossUnregisterMinionResponse);
+  rpc ShowMinions (BossShowMinionRequest) returns (BossShowMinionResponse);
+
+  // Workload Related
+  rpc RunWorkload (BossRunWorkloadRequest) returns (BossRunWorkloadResponse);
+  rpc StopWorkload (BossStopWorkloadRequest) returns (BossStopWorkloadResponse);
 }
 
 message BossPingRequest {
@@ -19,33 +25,47 @@ message BossPingRequest {
 message BossPingResponse {
 }
 
-message MinionRegisterRequest{
+message BossRegisterMinionRequest{
   string url = 1;
 }
 
-message MinionRegisterResponse {
-  bool is_ok = 1;
-  string failure_reason = 2;
+message BossRegisterMinionResponse {
+  GeneralStatus status = 1;
 }
 
-message MinionUnregisterRequest {
+message BossUnregisterMinonRequest {
   string url = 1;
 }
 
-message MinionUnregisterResponse {
-  bool is_ok = 1;
-  string failure_reason = 2;
+message BossUnregisterMinionResponse {
+  GeneralStatus status = 1;
 }
 
-message MinionShowRequest {
+message BossShowMinionRequest {
 }
 
-message MinionShowResponse {
-  repeated MinionStatus minions = 2;
+message BossShowMinionResponse {
+  repeated MinionStatus minions = 1;
 }
 
 message MinionStatus {
   string url = 1;
-  bool is_reachable = 2;
+  GeneralStatus status = 2;
 }
 
+message BossRunWorkloadRequest {
+  DataSpec data_spec = 1;
+  DBSpec db_spec = 2;
+  WorkloadSpec wl_spec = 3;
+}
+
+message BossRunWorkloadResponse {
+  GeneralStatus status = 1;
+}
+
+message BossStopWorkloadRequest {
+}
+
+message BossStopWorkloadResponse {
+  GeneralStatus status = 1;
+}

@@ -2,10 +2,11 @@ package keygen
 
 import "strings"
 
+// LeveledKey represents a single key generated as a combination of subkeys from different levels
 type LeveledKey struct {
 	subKeys []string
-	key string
 	delim string
+	key string
 }
 
 func NewLeveledKey(subKeys []string, delim string) *LeveledKey {

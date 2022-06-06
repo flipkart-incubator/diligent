@@ -11,6 +11,7 @@ const (
 	defaultDelim = "_"
 )
 
+// LeveledKeyGenSpec represents the specification for creating a Leveled Key Set
 type LeveledKeyGenSpec struct {
 	SubKeySets [][]string
 	Delim      string

@@ -47,9 +47,10 @@ type MinionServer struct {
 
 	host         string
 	grpcPort     string
-	metricsPort  string
-	bossUrl      string
-	advertiseUrl string
+	metricsPort     string
+	bossHostAndPort string
+	advertiseHost   string
+	advertisePort string
 
 	mut      *sync.Mutex
 	data     *DataContext
@@ -58,13 +59,14 @@ type MinionServer struct {
 	metrics  *metrics.DiligentMetrics
 }
 
-func NewMinionServer(host, grpcPort, metricsPort, bossUrl, advertiseUrl string) *MinionServer {
+func NewMinionServer(host, grpcPort, metricsPort, bossHostAndPort, advertiseHost, advertisePort string) *MinionServer {
 	return &MinionServer{
-		host:         host,
-		grpcPort:     grpcPort,
-		metricsPort:  metricsPort,
-		bossUrl:      bossUrl,
-		advertiseUrl: advertiseUrl,
+		host:            host,
+		grpcPort:        grpcPort,
+		metricsPort:     metricsPort,
+		bossHostAndPort: bossHostAndPort,
+		advertiseHost:   advertiseHost,
+		advertisePort:   advertisePort,
 
 		mut:      &sync.Mutex{},
 		data:     nil,
@@ -80,9 +82,9 @@ func (s *MinionServer) RegisterWithBoss() error {
 	var err error
 	for {
 		ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-		conn, err = grpc.DialContext(ctx, s.bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+		conn, err = grpc.DialContext(ctx, s.bossHostAndPort, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
-			log.Errorf("failed to connect to boss %s (%v)", s.bossUrl, err)
+			log.Errorf("failed to connect to boss %s (%v)", s.bossHostAndPort, err)
 			continue
 		} else {
 			break
@@ -91,7 +93,7 @@ func (s *MinionServer) RegisterWithBoss() error {
 	bossClient := proto.NewBossClient(conn)
 
 	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.MinionRegister(ctx, &proto.MinionRegisterRequest{Url: s.advertiseUrl})
+	_, err = bossClient.RegisterMinion(ctx, &proto.BossRegisterMinionRequest{Url: s.advertiseHost + s.advertisePort})
 	if err != nil {
 		log.Errorf("Registration failed with error: (%v)\n", err)
 		return err
@@ -127,24 +129,26 @@ func (s *MinionServer) Serve() error {
 	return nil
 }
 
-func (s *MinionServer) Ping(_ context.Context, in *proto.PingRequest) (*proto.PingResponse, error) {
+func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*proto.MinionPingResponse, error) {
 	log.Infof("GRPC: Ping")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	return &proto.PingResponse{Nonce: in.GetNonce()}, nil
+	return &proto.MinionPingResponse{}, nil
 }
 
-func (s *MinionServer) LoadDataSpec(ctx context.Context, in *proto.LoadDataSpecRequest) (*proto.LoadDataSpecResponse, error) {
+func (s *MinionServer) LoadDataSpec(ctx context.Context, in *proto.MinionLoadDataSpecRequest) (*proto.MinionLoadDataSpecResponse, error) {
 	log.Infof("GRPC: LoadDataSpec(name=%s)", in.GetSpecName())
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	// Don't process if workload is running
 	if s.workload != nil && s.workload.workload.IsRunning() {
-		return &proto.LoadDataSpecResponse{
-			IsOk:          false,
-			FailureReason: "Server is busy running workload",
+		return &proto.MinionLoadDataSpecResponse{
+			Status: &proto.GeneralStatus {
+				IsOk:          false,
+				FailureReason: "Server is busy running workload",
+			},
 		}, nil
 	}
 
@@ -157,73 +161,77 @@ func (s *MinionServer) LoadDataSpec(ctx context.Context, in *proto.LoadDataSpecR
 
 	log.Tracef("%s\n", string(dataSpec.Json()))
 
-	return &proto.LoadDataSpecResponse{
-		IsOk:          true,
-		FailureReason: "",
-		DataSpecInfo: &proto.DataSpecInfo{
-			SpecName:   in.GetSpecName(),
-			SpecType:   dataSpec.SpecType,
-			Version:    int32(dataSpec.Version),
-			NumRecs:    int32(dataSpec.KeyGenSpec.NumKeys()),
-			RecordSize: int32(dataSpec.RecordSize),
-			Hash:       0,
+	return &proto.MinionLoadDataSpecResponse{
+		Status: &proto.GeneralStatus{
+			IsOk:          true,
+			FailureReason: "",
 		},
 	}, nil
 }
 
-func (s *MinionServer) GetDataSpecInfo(context.Context, *proto.GetDataSpecInfoRequest) (*proto.GetDataSpecInfoResponse, error) {
+func (s *MinionServer) GetDataSpecInfo(context.Context, *proto.MinionGetDataSpecInfoRequest) (*proto.MinionGetDataSpecInfoResponse, error) {
 	log.Infof("GRPC: GetDataSpecInfo")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	var info *proto.GetDataSpecInfoResponse
+	var info *proto.MinionGetDataSpecInfoResponse
 
 	if s.data == nil {
-		info = &proto.GetDataSpecInfoResponse{
-			IsOk:          false,
-			FailureReason: "No data spec loaded",
+		info = &proto.MinionGetDataSpecInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "No data spec loaded",
+			},
 		}
 	} else {
-		info = &proto.GetDataSpecInfoResponse{
-			IsOk:          true,
-			FailureReason: "",
-			DataSpecInfo: &proto.DataSpecInfo{
-				SpecName:   s.data.dataSpecName,
-				SpecType:   s.data.dataSpec.SpecType,
-				Version:    int32(s.data.dataSpec.Version),
-				NumRecs:    int32(s.data.dataSpec.KeyGenSpec.NumKeys()),
-				RecordSize: int32(s.data.dataSpec.RecordSize),
-				Hash:       0,
+		info = &proto.MinionGetDataSpecInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          true,
+				FailureReason: "",
 			},
 		}
 	}
 	return info, nil
 }
 
-func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.OpenDBConnectionRequest) (*proto.OpenDBConnectionResponse, error) {
-	log.Infof("GRPC: OpenDBConnection(%s, %s)", in.GetDriver(), in.GetUrl())
+func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.MinionOpenDBConnectionRequest) (*proto.MinionOpenDBConnectionResponse, error) {
+	log.Infof("GRPC: OpenDBConnection(%s, %s)", in.GetDbSpec().GetDriver(), in.GetDbSpec().GetUrl())
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	// Don't process if workload is running
 	if s.workload != nil && s.workload.workload.IsRunning() {
-		return &proto.OpenDBConnectionResponse{IsOk: false, FailureReason: "Server is busy running workload"}, nil
+		return &proto.MinionOpenDBConnectionResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "Server is busy running workload",
+			},
+		}, nil
 	}
 
 	// Validate driver
-	driver := in.GetDriver()
+	driver := in.GetDbSpec().GetDriver()
 	switch driver {
 	case "mysql", "pgx":
 	default:
 		errStr := fmt.Sprintf("invalid driver: '%s'. Allowed values are 'mysql', 'pgx'", driver)
-		return &proto.OpenDBConnectionResponse{IsOk: false, FailureReason: errStr}, fmt.Errorf(errStr)
+		return &proto.MinionOpenDBConnectionResponse {
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: errStr,
+			},
+		}, fmt.Errorf(errStr)
 	}
 
 	// Validate URL
-	url := in.GetUrl()
+	url := in.GetDbSpec().GetUrl()
 	if url == "" {
 		errStr := fmt.Sprintf("please specify the connection url")
-		return &proto.OpenDBConnectionResponse{IsOk: false, FailureReason: errStr}, fmt.Errorf(errStr)
+		return &proto.MinionOpenDBConnectionResponse{
+			Status: &proto.GeneralStatus{
+				IsOk: false, FailureReason: errStr,
+			},
+		}, fmt.Errorf(errStr)
 	}
 
 	// Close any existing connection
@@ -235,7 +243,12 @@ func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.OpenDBConne
 	// Open new connection
 	db, err := sql.Open(driver, url)
 	if err != nil {
-		return &proto.OpenDBConnectionResponse{IsOk: false, FailureReason: err.Error()}, nil
+		return &proto.MinionOpenDBConnectionResponse{
+			Status: &proto.GeneralStatus{
+				IsOk: false,
+				FailureReason: err.Error(),
+			},
+		}, nil
 	}
 	s.db = &DBContext{
 		driver: driver,
@@ -245,132 +258,158 @@ func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.OpenDBConne
 
 	err = work.ConnCheck(s.db.db)
 	if err != nil {
-		return &proto.OpenDBConnectionResponse{IsOk: false, FailureReason: err.Error()}, nil
+		return &proto.MinionOpenDBConnectionResponse{
+			Status: &proto.GeneralStatus{
+				IsOk: false,
+				FailureReason: err.Error(),
+			},
+		}, nil
 	}
 	log.Infof("DB Connection successful (driver=%s, url=%s)", driver, url)
 
 	// Respond to RPC with success
-	return &proto.OpenDBConnectionResponse{IsOk: true, FailureReason: ""}, nil
+	return &proto.MinionOpenDBConnectionResponse{
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+			FailureReason: "",
+		},
+	}, nil
 }
 
-func (s *MinionServer) GetDBConnectionInfo(context.Context, *proto.GetDBConnectionInfoRequest) (*proto.GetDBConnectionInfoResponse, error) {
+func (s *MinionServer) GetDBConnectionInfo(context.Context, *proto.MinionGetDBConnectionInfoRequest) (*proto.MinionGetDBConnectionInfoResponse, error) {
 	log.Infof("GRPC: CheckDBConnection")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	// Do we even have a connection?
 	if s.db == nil {
-		return &proto.GetDBConnectionInfoResponse{
-			IsOk:          false,
-			FailureReason: "no connection info",
-			Driver:        "",
-			Url:           "",
+		return &proto.MinionGetDBConnectionInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "no connection info",
+			},
+			DbSpec: &proto.DBSpec {
+				Driver:        "",
+				Url:           "",
+			},
 		}, nil
 	}
 
 	// Connection exists - check if it works
 	err := work.ConnCheck(s.db.db)
 	if err != nil {
-		return &proto.GetDBConnectionInfoResponse{
-			IsOk:          false,
-			FailureReason: "connection check failed",
-			Driver:        s.db.driver,
-			Url:           s.db.url,
+		return &proto.MinionGetDBConnectionInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "connection check failed",
+			},
+			DbSpec: &proto.DBSpec{
+				Driver:        s.db.driver,
+				Url:           s.db.url,
+			},
 		}, nil
 	}
 
 	// Connection exists and check succeeded
-	return &proto.GetDBConnectionInfoResponse{
-		IsOk:          true,
-		FailureReason: "",
-		Driver:        s.db.driver,
-		Url:           s.db.url,
+	return &proto.MinionGetDBConnectionInfoResponse{
+		Status: &proto.GeneralStatus{
+			IsOk:          true,
+			FailureReason: "",
+		},
+		DbSpec: &proto.DBSpec{
+			Driver:        s.db.driver,
+			Url:           s.db.url,
+		},
 	}, nil
 }
 
-func (s *MinionServer) CloseDBConnection(context.Context, *proto.CloseDBConnectionRequest) (*proto.CloseDBConnectionResponse, error) {
-	log.Infof("GRPC: CheckDBConnection")
-	s.mut.Lock()
-	defer s.mut.Unlock()
 
-	// Close any existing connection
-	if s.db != nil {
-		s.db.db.Close()
-		s.db.db = nil
-		s.db.driver = ""
-		s.db.url = ""
-	}
-
-	return &proto.CloseDBConnectionResponse{}, nil
-}
-
-func (s *MinionServer) RunWorkload(_ context.Context, in *proto.RunWorkloadRequest) (*proto.RunWorkloadResponse, error) {
+func (s *MinionServer) RunWorkload(_ context.Context, in *proto.MinionRunWorkloadRequest) (*proto.MinionRunWorkloadResponse, error) {
 	log.Infof("GRPC: RunWorkload")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	// Don't process if workload is running
 	if s.workload != nil && s.workload.workload.IsRunning() {
-		return &proto.RunWorkloadResponse{IsOk: false, FailureReason: "Server is busy running workload"}, nil
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk: false,
+				FailureReason: "Server is busy running workload",
+			},
+		}, nil
 	}
 
 	// Validate whether we have a dataspec and DB connection
 	if s.data == nil {
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: fmt.Sprintf("no dataspec loaded"),
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: fmt.Sprintf("no dataspec loaded"),
+			},
 		}, nil
 	}
 	if s.db == nil {
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: fmt.Sprintf("no connection to database"),
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: fmt.Sprintf("no connection to database"),
+			},
 		}, nil
 	}
 
 	// Validate request params
-	durationSec := int(in.GetDurationSec())
+	durationSec := int(in.GetWorkloadSpec().GetDurationSec())
 	if durationSec < 0 {
 		reason := fmt.Sprintf("invalid duration %d. Must be >= 0", durationSec)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 
-	batchSize := int(in.GetBatchSize())
+	batchSize := int(in.GetWorkloadSpec().GetBatchSize())
 	if batchSize < 1 {
 		reason := fmt.Sprintf("invalid batch size %d. Must be >= 1", batchSize)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 
-	concurrency := int(in.GetConcurrency())
+	concurrency := int(in.GetWorkloadSpec().GetConcurrency())
 	if concurrency < 1 {
 		reason := fmt.Sprintf("invalid concurrency %d. Must be >= 1", concurrency)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 
-	table := in.GetTableName()
+	table := in.GetWorkloadSpec().GetTableName()
 	if table == "" {
 		reason := fmt.Sprintf("table name is missing")
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 
-	inputRange := in.GetAssignedRange()
+	inputRange := in.GetWorkloadSpec().GetAssignedRange()
 	if inputRange == nil {
 		reason := fmt.Sprintf("assigned range is missing")
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 
@@ -379,23 +418,29 @@ func (s *MinionServer) RunWorkload(_ context.Context, in *proto.RunWorkloadReque
 	rangeLimit := int(inputRange.GetLimit())
 	if rangeStart < 0 || rangeLimit < rangeStart {
 		reason := fmt.Sprintf("invalid range [%d, %d)", rangeStart, rangeLimit)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 	if rangeStart < 0 || rangeStart >= totalRows {
 		reason := fmt.Sprintf("invalid range [%d, %d)", rangeStart, rangeLimit)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 	if rangeLimit < 0 || rangeLimit > totalRows {
 		reason := fmt.Sprintf("invalid range [%d, %d)", rangeStart, rangeLimit)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 	assignedRange := proto.RangeFromProto(inputRange)
@@ -414,7 +459,7 @@ func (s *MinionServer) RunWorkload(_ context.Context, in *proto.RunWorkloadReque
 		DurationSec: durationSec,
 	}
 
-	workloadName := in.GetWorkloadName()
+	workloadName := in.GetWorkloadSpec().GetWorkloadName()
 	var workload *work.Workload
 	switch workloadName {
 	case "insert":
@@ -439,9 +484,11 @@ func (s *MinionServer) RunWorkload(_ context.Context, in *proto.RunWorkloadReque
 		workload = work.NewDeleteTxnWorkload(assignedRange, rp)
 	default:
 		reason := fmt.Sprintf("invalid workload '%s'", workloadName)
-		return &proto.RunWorkloadResponse{
-			IsOk:          false,
-			FailureReason: reason,
+		return &proto.MinionRunWorkloadResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: reason,
+			},
 		}, fmt.Errorf(reason)
 	}
 
@@ -469,40 +516,46 @@ func (s *MinionServer) RunWorkload(_ context.Context, in *proto.RunWorkloadReque
 
 	workload.Start(time.Duration(durationSec) * time.Second)
 
-	return &proto.RunWorkloadResponse{
-		IsOk:          true,
-		FailureReason: "",
+	return &proto.MinionRunWorkloadResponse{
+		Status: &proto.GeneralStatus{
+			IsOk:          true,
+			FailureReason: "",
+		},
 	}, nil
 }
 
-func (s *MinionServer) GetWorkloadInfo(_ context.Context, in *proto.GetWorkloadInfoRequest) (*proto.GetWorkloadInfoResponse, error) {
+func (s *MinionServer) GetWorkloadInfo(_ context.Context, in *proto.MinionGetWorkloadInfoRequest) (*proto.MinionGetWorkloadInfoResponse, error) {
 	log.Infof("GRPC: GetWorkloadInfo")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	if s.workload == nil {
-		return &proto.GetWorkloadInfoResponse{
-			IsOk:          false,
-			FailureReason: "no workload info",
+		return &proto.MinionGetWorkloadInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "no workload info",
+			},
 		}, nil
 	} else {
-		return &proto.GetWorkloadInfoResponse{
-			IsOk:          true,
-			FailureReason: "",
-			WorkloadInfo: &proto.WorkloadInfo{
+		return &proto.MinionGetWorkloadInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          true,
+				FailureReason: "",
+			},
+			WorkloadSpec: &proto.WorkloadSpec{
 				WorkloadName:  s.workload.workloadName,
 				AssignedRange: proto.RangeToProto(s.workload.assignedRange),
 				TableName:     s.workload.tableName,
 				DurationSec:   int32(s.workload.durationSec),
 				Concurrency:   int32(s.workload.concurrency),
 				BatchSize:     int32(s.workload.batchSize),
-				IsRunning:     s.workload.workload.IsRunning(),
 			},
+			IsRunning:     s.workload.workload.IsRunning(),
 		}, nil
 	}
 }
 
-func (s *MinionServer) StopWorkload(_ context.Context, in *proto.StopWorkloadRequest) (*proto.StopWorkloadResponse, error) {
+func (s *MinionServer) StopWorkload(_ context.Context, in *proto.MinionStopWorkloadRequest) (*proto.MinionStopWorkloadResponse, error) {
 	log.Infof("GRPC: StopWorkload")
 	s.mut.Lock()
 	defer s.mut.Unlock()
@@ -511,5 +564,5 @@ func (s *MinionServer) StopWorkload(_ context.Context, in *proto.StopWorkloadReq
 		s.workload.workload.Cancel()
 		s.workload.workload.Wait()
 	}
-	return &proto.StopWorkloadResponse{}, nil
+	return &proto.MinionStopWorkloadResponse{}, nil
 }
