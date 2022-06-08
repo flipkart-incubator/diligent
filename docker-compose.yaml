@@ -8,19 +8,19 @@ services:
   prometheus:
     image: prom/prometheus:v2.36.0
     ports:
-      - 9090:9090
+      - "9090:9090"
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker-compose-files/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - diligent
 
   grafana:
     image: grafana/grafana:8.5.4
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ./monitoring/grafana/dashboards:/grafana/dashboards
+      - ./docker-compose-files/grafana/provisioning:/etc/grafana/provisioning
+      - ./docker-compose-files/grafana/dashboards:/grafana/dashboards
     networks:
       - diligent
 
@@ -29,9 +29,17 @@ services:
       context: .
       dockerfile: Minion.Dockerfile
     image: diligent/minion:latest
+    command: ["/diligent/minion", "--boss", "boss:5710", "--advertiseHost", "minion0"]
+    networks:
+      - diligent
+
+  boss:
+    build:
+      context: .
+      dockerfile: Boss.Dockerfile
+    image: diligent/boss:latest
     ports:
-      - 9119:9119
-      - 2112:2112
+      - "5710:5710"
     networks:
       - diligent
 

@@ -6,4 +6,4 @@ scrape_configs:
   - job_name: "diligent"
     static_configs:
     - targets:
-      - 'minion0:2112'
+      - 'minion0:9090'
