@@ -1,0 +1,13 @@
+# A ClusterIP service for Grafana
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "diligent.grafana.name" . }}
+  labels:
+    {{- include "diligent.commonLabels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    {{- include "diligent.grafana.selectorLabels" . | nindent 4 }}

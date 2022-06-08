@@ -1,0 +1,33 @@
+# Default values for diligent.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+imagePullSecrets: []
+
+boss:
+  image:
+    repo:
+    tag:
+    pullPolicy: IfNotPresent
+
+minion:
+  replicas: 3
+  image:
+    repo:
+    tag:
+    pullPolicy: IfNotPresent
+
+prometheus:
+  image:
+    repo: prom/prometheus
+    tag: v2.36.0
+    pullPolicy: IfNotPresent
+  deployRbac: true
+
+grafana:
+  image:
+    repo: grafana/grafana
+    tag: 8.5.4
+    pullPolicy: IfNotPresent
+
+

@@ -1,0 +1,13 @@
+# A ClusterIP service for prometheus
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "diligent.prometheus.name" . }}
+  labels:
+    {{- include "diligent.commonLabels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 9090
+      targetPort: 9090
+  selector:
+    {{- include "diligent.prometheus.selectorLabels" . | nindent 4 }}

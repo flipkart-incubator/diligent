@@ -1,0 +1,32 @@
+# A Replicaset for boss
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: {{ include "diligent.boss.name" . }}
+  labels:
+    {{- include "diligent.commonLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      {{- include "diligent.boss.selectorLabels" . | nindent 6 }}
+
+  template:
+    metadata:
+      labels:
+        {{- include "diligent.boss.selectorLabels" . | nindent 8 }}
+        {{- include "diligent.commonLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: diligent-boss
+          image: "{{ .Values.boss.image.repo }}:{{ .Values.boss.image.tag }}"
+          imagePullPolicy: {{ .Values.boss.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: 5710
+              protocol: TCP

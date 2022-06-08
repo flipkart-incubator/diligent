@@ -1,12 +1,13 @@
+{{- if .Values.prometheus.deployRbac -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: prometheus
+  name: {{ include "diligent.prometheus.name" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: prometheus
+  name: {{ include "diligent.prometheus.name" . }}
 rules:
   - apiGroups: [""]
     resources:
@@ -18,11 +19,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: prometheus
+  name: {{ include "diligent.prometheus.name" . }}
 roleRef:
   kind: Role
-  name: prometheus
+  name: {{ include "diligent.prometheus.name" . }}
   apiGroup: rbac.authorization.k8s.io
 subjects:
   - kind: ServiceAccount
-    name: prometheus
+    name: {{ include "diligent.prometheus.name" . }}
+{{- end }}

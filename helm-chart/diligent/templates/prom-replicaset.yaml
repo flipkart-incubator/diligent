@@ -1,0 +1,51 @@
+# A ReplicaSet for prometheus
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: {{ include "diligent.prometheus.name" . }}
+  labels:
+    {{- include "diligent.commonLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      {{- include "diligent.prometheus.selectorLabels" . | nindent 6 }}
+
+  template:
+    metadata:
+      labels:
+        {{- include "diligent.prometheus.selectorLabels" . | nindent 8 }}
+        {{- include "diligent.commonLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      serviceAccountName: {{ include "diligent.prometheus.name" . }}
+
+      containers:
+        - name: prometheus
+          image: "{{ .Values.prometheus.image.repo }}:{{ .Values.prometheus.image.tag }}"
+          imagePullPolicy: {{ .Values.prometheus.image.pullPolicy }}
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus/"
+          ports:
+            - name: http
+              protocol: TCP
+              containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus/
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            defaultMode: 420
+            name: {{ include "diligent.prometheus.name" . }}-conf
+
+        - name: prometheus-storage-volume
+          emptyDir: {}

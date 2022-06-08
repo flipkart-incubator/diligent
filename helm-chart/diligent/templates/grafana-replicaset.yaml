@@ -2,22 +2,34 @@
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  name: grafana
+  name: {{ include "diligent.grafana.name" . }}
+  labels:
+    {{- include "diligent.commonLabels" . | nindent 4 }}
 spec:
   replicas: 1
+
   selector:
     matchLabels:
-      app: grafana
+      {{- include "diligent.grafana.selectorLabels" . | nindent 6 }}
+
   template:
     metadata:
       labels:
-        app: grafana
+        {{- include "diligent.grafana.selectorLabels" . | nindent 8 }}
+        {{- include "diligent.commonLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
-        - name: grafana
-          image: grafana/grafana:8.5.4
+        - name: diligent-grafana
+          image: "{{ .Values.grafana.image.repo }}:{{ .Values.grafana.image.tag }}"
+          imagePullPolicy: {{ .Values.boss.image.pullPolicy }}
           ports:
-            - containerPort: 3000
+            - name: http
+              containerPort: 3000
+              protocol: TCP
           volumeMounts:
             - mountPath: /var/lib/grafana
               name: grafana-storage
@@ -36,12 +48,12 @@ spec:
         - name: grafana-prov-datasources
           configMap:
             defaultMode: 420
-            name: grafana-prov-datasources
+            name: {{ include "diligent.grafana.name" . }}-prov-datasources
         - name: grafana-prov-dashboards
           configMap:
             defaultMode: 420
-            name: grafana-prov-dashboards
+            name: {{ include "diligent.grafana.name" . }}-prov-dashboards
         - name: grafana-diligent-dashboards
           configMap:
             defaultMode: 420
-            name: grafana-diligent-dashboards
+            name: {{ include "diligent.grafana.name" . }}-dashboards

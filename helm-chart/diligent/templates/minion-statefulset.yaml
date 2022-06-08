@@ -1,0 +1,41 @@
+# A Statefulset for minions
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "diligent.minion.name" . }}
+  labels:
+    {{- include "diligent.commonLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.minion.replicas }}
+
+  selector:
+    matchLabels:
+      {{- include "diligent.minion.selectorLabels" . | nindent 8 }}
+
+  serviceName: {{ include "diligent.minion.name" . }}
+
+  template:
+    metadata:
+      labels:
+        {{- include "diligent.minion.selectorLabels" . | nindent 8 }}
+        {{- include "diligent.commonLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: diligent-minion
+          image: "{{ .Values.minion.image.repo }}:{{ .Values.minion.image.tag }}"
+          imagePullPolicy: {{ .Values.minion.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: 5710
+              protocol: TCP
+          command: ["/diligent/minion"]
+          args: ["--boss", "$(BOSS_SERVICE_NAME):5710", "--advertiseHost", "$(MY_POD_NAME).$(MY_HEADLESS_SERVICE_NAME)"]
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_HEADLESS_SERVICE_NAME
+              value: {{ include "diligent.minion.name" . }}
+            - name: BOSS_SERVICE_NAME
+              value: {{ include "diligent.boss.name" . }}

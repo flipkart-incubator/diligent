@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prometheus-conf
+  name: {{ include "diligent.prometheus.name" . }}-conf
 data:
   prometheus.yml: |-
     global:
@@ -12,10 +12,10 @@ data:
           - role: endpoints
             namespaces:
               names:
-                - default
+                - {{ .Release.Namespace }}
         relabel_configs:
         - source_labels: [__meta_kubernetes_endpoints_name]
-          regex: 'minion'
+          regex: {{ include "diligent.minion.name" . | quote }}
           action: keep
         - source_labels: [__meta_kubernetes_pod_name]
           target_label: instance
