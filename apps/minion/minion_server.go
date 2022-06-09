@@ -78,11 +78,11 @@ func NewMinionServer(host, grpcPort, metricsPort, bossHostAndPort, advertiseHost
 
 func (s *MinionServer) RegisterWithBoss() error {
 	var conn *grpc.ClientConn
-	var ctx context.Context
 	var err error
 	for {
-		ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-		conn, err = grpc.DialContext(ctx, s.bossHostAndPort, grpc.WithInsecure(), grpc.WithBlock())
+		dialCtx, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		conn, err = grpc.DialContext(dialCtx, s.bossHostAndPort, grpc.WithInsecure(), grpc.WithBlock())
+		dialCancel()
 		if err != nil {
 			log.Errorf("failed to connect to boss %s (%v)", s.bossHostAndPort, err)
 			continue
@@ -90,8 +90,9 @@ func (s *MinionServer) RegisterWithBoss() error {
 
 		bossClient := proto.NewBossClient(conn)
 
-		ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-		_, err = bossClient.RegisterMinion(ctx, &proto.BossRegisterMinionRequest{Url: s.advertiseHost + s.advertisePort})
+		grcpCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, err = bossClient.RegisterMinion(grcpCtx, &proto.BossRegisterMinionRequest{Url: s.advertiseHost + s.advertisePort})
+		grpcCancel()
 		if err != nil {
 			log.Errorf("Registration failed with error: (%v)\n", err)
 			continue

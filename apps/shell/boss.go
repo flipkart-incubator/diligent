@@ -84,6 +84,9 @@ func init() {
 	bossStopWorkloadCmd := &grumble.Command{
 		Name: "stop-workload",
 		Help: "Stop any running workload",
+		Flags: func(f *grumble.Flags) {
+			f.String("b", "boss-url", "", "URL of boss server")
+		},
 		Run: bossStopWorkload,
 	}
 	bossCmd.AddCommand(bossStopWorkloadCmd)
@@ -95,15 +98,15 @@ func bossPing(c *grumble.Context) error {
 		return fmt.Errorf("please provide a valid bossUrl for the boss server")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	bossClient, err := getBossClient(bossUrl)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+		c.App.Printf("Request failed: (%v)\n", err)
+		return err
 	}
-	bossClient := proto.NewBossClient(conn)
 
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.Ping(ctx, &proto.BossPingRequest{})
+	grpcCtx, grpcCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err = bossClient.Ping(grpcCtx, &proto.BossPingRequest{})
+	grpcCtxCancel()
 	if err != nil {
 		c.App.Printf("%s: Ping failed! (%v)\n", bossUrl, err)
 	} else {
@@ -123,15 +126,15 @@ func bossRegisterMinion(c *grumble.Context) error {
 		return fmt.Errorf("please provide a valid minionUrl for the minion server")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	bossClient, err := getBossClient(bossUrl)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+		c.App.Printf("Request failed: (%v)\n", err)
+		return err
 	}
-	bossClient := proto.NewBossClient(conn)
 
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.RegisterMinion(ctx, &proto.BossRegisterMinionRequest{Url: minionUrl})
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err = bossClient.RegisterMinion(grpcCtx, &proto.BossRegisterMinionRequest{Url: minionUrl})
+	grpcCancel()
 	if err != nil {
 		c.App.Printf("Registration failed: (%v)\n", err)
 	} else {
@@ -151,15 +154,15 @@ func bossUnregisterMinion(c *grumble.Context) error {
 		return fmt.Errorf("please provide a valid minionUrl for the minion server")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	bossClient, err := getBossClient(bossUrl)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+		c.App.Printf("Request failed: (%v)\n", err)
+		return err
 	}
-	bossClient := proto.NewBossClient(conn)
 
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.UnregisterMinion(ctx, &proto.BossUnregisterMinonRequest{Url: minionUrl})
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinonRequest{Url: minionUrl})
+	grpcCancel()
 	if err != nil {
 		c.App.Printf("Unregistration failed: (%v)\n", err)
 	} else {
@@ -174,15 +177,15 @@ func bossShowMinions(c *grumble.Context) error {
 		return fmt.Errorf("please provide a valid bossUrl for the boss server")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	bossClient, err := getBossClient(bossUrl)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+		c.App.Printf("Request failed: (%v)\n", err)
+		return err
 	}
-	bossClient := proto.NewBossClient(conn)
 
-	ctx, _ = context.WithTimeout(context.Background(), 20*time.Second)
-	res, err := bossClient.ShowMinions(ctx, &proto.BossShowMinionRequest{})
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 20*time.Second)
+	res, err := bossClient.ShowMinions(grpcCtx, &proto.BossShowMinionRequest{})
+	grpcCancel()
 	if err != nil {
 		c.App.Printf("Request failed: (%v)\n", err)
 		return err
@@ -277,15 +280,14 @@ func bossRunWorkload(c *grumble.Context) error {
 	c.App.Println("    	concurrency:", concurrency)
 	c.App.Println("    	duration(s):", durationSec)
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	bossClient, err := getBossClient(bossUrl)
 	if err != nil {
-		return fmt.Errorf("connection failed to %s (%v)", bossUrl, err)
+		c.App.Printf("Request failed: (%v)\n", err)
+		return err
 	}
-	bossClient := proto.NewBossClient(conn)
 
-	ctx, _ = context.WithTimeout(context.Background(), 15*time.Second)
-	res, err := bossClient.RunWorkload(ctx, &proto.BossRunWorkloadRequest{
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	res, err := bossClient.RunWorkload(grpcCtx, &proto.BossRunWorkloadRequest{
 		DataSpec: proto.DataSpecToProto(dataSpec),
 		DbSpec:   &proto.DBSpec{
 			Driver: dbDriver,
@@ -300,6 +302,7 @@ func bossRunWorkload(c *grumble.Context) error {
 			BatchSize:     int32(batchSize),
 		},
 	})
+	grpcCancel()
 	if err != nil {
 		c.App.Printf("gRPC Request failed: (%v)\n", err)
 		return err
@@ -308,7 +311,7 @@ func bossRunWorkload(c *grumble.Context) error {
 		c.App.Printf("Request failed: (%v)\n", res.GetStatus().GetFailureReason())
 		return err
 	}
-	c.App.Printf("OK")
+	c.App.Printf("OK\n")
 	return nil
 }
 
@@ -318,15 +321,15 @@ func bossStopWorkload(c *grumble.Context) error {
 		return fmt.Errorf("please provide a valid bossUrl for the boss server")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	bossClient, err := getBossClient(bossUrl)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+		c.App.Printf("Request failed: (%v)\n", err)
+		return err
 	}
-	bossClient := proto.NewBossClient(conn)
 
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	res, err := bossClient.StopWorkload(ctx, &proto.BossStopWorkloadRequest{})
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	res, err := bossClient.StopWorkload(grpcCtx, &proto.BossStopWorkloadRequest{})
+	grpcCancel()
 	if err != nil {
 		c.App.Printf("Request failed: (%v)\n", err)
 		return err
@@ -337,4 +340,15 @@ func bossStopWorkload(c *grumble.Context) error {
 	}
 	c.App.Printf("OK")
 	return nil
+}
+
+func getBossClient(bossUrl string) (proto.BossClient, error) {
+	connCtx, connCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	conn, err := grpc.DialContext(connCtx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	connCtxCancel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+	}
+	bossClient := proto.NewBossClient(conn)
+	return bossClient, nil
 }
