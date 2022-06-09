@@ -26,7 +26,7 @@ spec:
           imagePullPolicy: {{ .Values.minion.image.pullPolicy }}
           ports:
             - name: grpc
-              containerPort: 5710
+              containerPort: 5711
               protocol: TCP
           command: ["/diligent/minion"]
           args: ["--boss", "$(BOSS_SERVICE_NAME):5710", "--advertiseHost", "$(MY_POD_NAME).$(MY_HEADLESS_SERVICE_NAME)"]

@@ -86,17 +86,18 @@ func (s *MinionServer) RegisterWithBoss() error {
 		if err != nil {
 			log.Errorf("failed to connect to boss %s (%v)", s.bossHostAndPort, err)
 			continue
+		}
+
+		bossClient := proto.NewBossClient(conn)
+
+		ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+		_, err = bossClient.RegisterMinion(ctx, &proto.BossRegisterMinionRequest{Url: s.advertiseHost + s.advertisePort})
+		if err != nil {
+			log.Errorf("Registration failed with error: (%v)\n", err)
+			continue
 		} else {
 			break
 		}
-	}
-	bossClient := proto.NewBossClient(conn)
-
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.RegisterMinion(ctx, &proto.BossRegisterMinionRequest{Url: s.advertiseHost + s.advertisePort})
-	if err != nil {
-		log.Errorf("Registration failed with error: (%v)\n", err)
-		return err
 	}
 
 	return nil
