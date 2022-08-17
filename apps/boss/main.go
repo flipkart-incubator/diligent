@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	log "github.com/sirupsen/logrus"
+	"net"
 )
 
 const (
@@ -17,7 +18,7 @@ func main() {
 	flag.Parse()
 
 	log.Printf("Starting server. Host=%s, grpcPort=%s", *host, *grpcPort)
-	boss := NewBossServer(*host, *grpcPort)
+	boss := NewBossServer(net.JoinHostPort(*host, *grpcPort))
 	err := boss.Serve()
 	if err != nil {
 		log.Fatal(err)

@@ -24,17 +24,15 @@ const (
 // It is thread safe
 type BossServer struct {
 	proto.UnimplementedBossServer
-	host     string
-	grpcPort string
+	listenAddr string
 
 	mut         *sync.Mutex
 	minionPools map[string]*grpcpool.Pool
 }
 
-func NewBossServer(host, grpcPort string) *BossServer {
+func NewBossServer(listenAddr string) *BossServer {
 	return &BossServer{
-		host:        host,
-		grpcPort:    grpcPort,
+		listenAddr:  listenAddr,
 		mut:         &sync.Mutex{},
 		minionPools: make(map[string]*grpcpool.Pool),
 	}
@@ -42,9 +40,8 @@ func NewBossServer(host, grpcPort string) *BossServer {
 
 func (s *BossServer) Serve() error {
 	// Create listening port
-	address := net.JoinHostPort(s.host, s.grpcPort)
-	log.Infof("Creating listening port: %s", address)
-	listener, err := net.Listen("tcp", address)
+	log.Infof("Creating listening port: %s", s.listenAddr)
+	listener, err := net.Listen("tcp", s.listenAddr)
 	if err != nil {
 		return err
 	}
@@ -64,7 +61,7 @@ func (s *BossServer) Serve() error {
 		return err
 	}
 
-	log.Infof("Diligent Boss server up and running on %s", address)
+	log.Infof("Diligent Boss server up and running")
 	return nil
 }
 
