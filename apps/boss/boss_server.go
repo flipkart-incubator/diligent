@@ -20,6 +20,8 @@ const (
 	minionRequestTimeout      = 5
 )
 
+// BossServer represents a diligent boss gRPC server and associated state
+// It is thread safe
 type BossServer struct {
 	proto.UnimplementedBossServer
 	host     string
@@ -40,7 +42,7 @@ func NewBossServer(host, grpcPort string) *BossServer {
 
 func (s *BossServer) Serve() error {
 	// Create listening port
-	address := s.host + s.grpcPort
+	address := net.JoinHostPort(s.host, s.grpcPort)
 	log.Infof("Creating listening port: %s", address)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
@@ -62,7 +64,7 @@ func (s *BossServer) Serve() error {
 		return err
 	}
 
-	log.Infof("Diligent Boss server up and running")
+	log.Infof("Diligent Boss server up and running on %s", address)
 	return nil
 }
 
