@@ -7,18 +7,26 @@ import (
 )
 
 const (
-	defaultHost     = ""
+	defaultGrpcHost = ""
 	defaultGrpcPort = "5710"
 )
 
 func main() {
+	defaultGrpcAddr := net.JoinHostPort(defaultGrpcHost, defaultGrpcPort)
+
 	// Parse command line options
-	host := flag.String("host", defaultHost, "listening host")
-	grpcPort := flag.String("grpc-port", defaultGrpcPort, "grpc port")
+	grpcAddr := flag.String("grpc-addr", defaultGrpcAddr, "listening host[:port] for gRPC connections")
 	flag.Parse()
 
-	log.Printf("Starting server. Host=%s, grpcPort=%s", *host, *grpcPort)
-	boss := NewBossServer(net.JoinHostPort(*host, *grpcPort))
+	log.Printf("Starting server process. Arguments: grpc-addr=%s", *grpcAddr)
+
+	// If no port is specified for gRPC listener, use default gRPC port
+	if _, _, err := net.SplitHostPort(*grpcAddr); err != nil {
+		*grpcAddr = net.JoinHostPort(*grpcAddr, defaultGrpcPort)
+	}
+
+	log.Printf("Creating boss server instance. Arguments: grpc-addr=%s", *grpcAddr)
+	boss := NewBossServer(*grpcAddr)
 	err := boss.Serve()
 	if err != nil {
 		log.Fatal(err)

@@ -10,7 +10,7 @@ import (
 )
 
 type DiligentMetrics struct {
-	metricsPort               string
+	metricsAddr               string
 	configTxnsEnabledGauge    prometheus.Gauge
 	configOpsPerTxnGauge      prometheus.Gauge
 	configConcurrencyGauge    prometheus.Gauge
@@ -22,9 +22,9 @@ type DiligentMetrics struct {
 	dbConnectionsGaugeVec     *prometheus.GaugeVec
 }
 
-func NewDiligentMetrics(metricsPort string) *DiligentMetrics {
+func NewDiligentMetrics(metricsAddr string) *DiligentMetrics {
 	dm := &DiligentMetrics{
-		metricsPort: metricsPort,
+		metricsAddr: metricsAddr,
 	}
 
 	dm.configTxnsEnabledGauge = prometheus.NewGauge(
@@ -117,7 +117,7 @@ func (dm *DiligentMetrics) Register() {
 
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		err := http.ListenAndServe(dm.metricsPort, nil)
+		err := http.ListenAndServe(dm.metricsAddr, nil)
 		if err != nil {
 			log.Fatal(err)
 		}

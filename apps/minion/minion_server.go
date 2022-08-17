@@ -45,12 +45,10 @@ type WorkloadContext struct {
 type MinionServer struct {
 	proto.UnimplementedMinionServer
 
-	host         string
-	grpcPort     string
-	metricsPort     string
-	bossHostAndPort string
-	advertiseHost   string
-	advertisePort string
+	grpcAddr      string
+	metricsAddr   string
+	advertiseAddr string
+	bossAddr      string
 
 	mut      *sync.Mutex
 	data     *DataContext
@@ -59,14 +57,12 @@ type MinionServer struct {
 	metrics  *metrics.DiligentMetrics
 }
 
-func NewMinionServer(host, grpcPort, metricsPort, bossHostAndPort, advertiseHost, advertisePort string) *MinionServer {
+func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *MinionServer {
 	return &MinionServer{
-		host:            host,
-		grpcPort:        grpcPort,
-		metricsPort:     metricsPort,
-		bossHostAndPort: bossHostAndPort,
-		advertiseHost:   advertiseHost,
-		advertisePort:   advertisePort,
+		grpcAddr:      grpcAddr,
+		metricsAddr:   metricsAddr,
+		advertiseAddr: advertiseAddr,
+		bossAddr:      bossAddr,
 
 		mut:      &sync.Mutex{},
 		data:     nil,
@@ -81,17 +77,17 @@ func (s *MinionServer) RegisterWithBoss() error {
 	var err error
 	for {
 		dialCtx, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		conn, err = grpc.DialContext(dialCtx, s.bossHostAndPort, grpc.WithInsecure(), grpc.WithBlock())
+		conn, err = grpc.DialContext(dialCtx, s.bossAddr, grpc.WithInsecure(), grpc.WithBlock())
 		dialCancel()
 		if err != nil {
-			log.Errorf("failed to connect to boss %s (%v)", s.bossHostAndPort, err)
+			log.Errorf("failed to connect to boss %s (%v)", s.bossAddr, err)
 			continue
 		}
 
 		bossClient := proto.NewBossClient(conn)
 
 		grcpCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, err = bossClient.RegisterMinion(grcpCtx, &proto.BossRegisterMinionRequest{Url: s.advertiseHost + s.advertisePort})
+		_, err = bossClient.RegisterMinion(grcpCtx, &proto.BossRegisterMinionRequest{Url: s.advertiseAddr})
 		grpcCancel()
 		if err != nil {
 			log.Errorf("Registration failed with error: (%v)\n", err)
@@ -106,12 +102,11 @@ func (s *MinionServer) RegisterWithBoss() error {
 
 func (s *MinionServer) Serve() error {
 	// Start metrics serving
-	s.metrics = metrics.NewDiligentMetrics(s.metricsPort)
+	s.metrics = metrics.NewDiligentMetrics(s.metricsAddr)
 	s.metrics.Register()
 
 	// Create listening port
-	address := s.host + s.grpcPort
-	listener, err := net.Listen("tcp", address)
+	listener, err := net.Listen("tcp", s.grpcAddr)
 	if err != nil {
 		return err
 	}
@@ -147,7 +142,7 @@ func (s *MinionServer) LoadDataSpec(ctx context.Context, in *proto.MinionLoadDat
 	// Don't process if workload is running
 	if s.workload != nil && s.workload.workload.IsRunning() {
 		return &proto.MinionLoadDataSpecResponse{
-			Status: &proto.GeneralStatus {
+			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: "Server is busy running workload",
 			},
@@ -217,7 +212,7 @@ func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.MinionOpenD
 	case "mysql", "pgx":
 	default:
 		errStr := fmt.Sprintf("invalid driver: '%s'. Allowed values are 'mysql', 'pgx'", driver)
-		return &proto.MinionOpenDBConnectionResponse {
+		return &proto.MinionOpenDBConnectionResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: errStr,
@@ -247,7 +242,7 @@ func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.MinionOpenD
 	if err != nil {
 		return &proto.MinionOpenDBConnectionResponse{
 			Status: &proto.GeneralStatus{
-				IsOk: false,
+				IsOk:          false,
 				FailureReason: err.Error(),
 			},
 		}, nil
@@ -262,7 +257,7 @@ func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.MinionOpenD
 	if err != nil {
 		return &proto.MinionOpenDBConnectionResponse{
 			Status: &proto.GeneralStatus{
-				IsOk: false,
+				IsOk:          false,
 				FailureReason: err.Error(),
 			},
 		}, nil
@@ -272,7 +267,7 @@ func (s *MinionServer) OpenDBConnection(_ context.Context, in *proto.MinionOpenD
 	// Respond to RPC with success
 	return &proto.MinionOpenDBConnectionResponse{
 		Status: &proto.GeneralStatus{
-			IsOk: true,
+			IsOk:          true,
 			FailureReason: "",
 		},
 	}, nil
@@ -290,9 +285,9 @@ func (s *MinionServer) GetDBConnectionInfo(context.Context, *proto.MinionGetDBCo
 				IsOk:          false,
 				FailureReason: "no connection info",
 			},
-			DbSpec: &proto.DBSpec {
-				Driver:        "",
-				Url:           "",
+			DbSpec: &proto.DBSpec{
+				Driver: "",
+				Url:    "",
 			},
 		}, nil
 	}
@@ -306,8 +301,8 @@ func (s *MinionServer) GetDBConnectionInfo(context.Context, *proto.MinionGetDBCo
 				FailureReason: "connection check failed",
 			},
 			DbSpec: &proto.DBSpec{
-				Driver:        s.db.driver,
-				Url:           s.db.url,
+				Driver: s.db.driver,
+				Url:    s.db.url,
 			},
 		}, nil
 	}
@@ -319,12 +314,11 @@ func (s *MinionServer) GetDBConnectionInfo(context.Context, *proto.MinionGetDBCo
 			FailureReason: "",
 		},
 		DbSpec: &proto.DBSpec{
-			Driver:        s.db.driver,
-			Url:           s.db.url,
+			Driver: s.db.driver,
+			Url:    s.db.url,
 		},
 	}, nil
 }
-
 
 func (s *MinionServer) RunWorkload(_ context.Context, in *proto.MinionRunWorkloadRequest) (*proto.MinionRunWorkloadResponse, error) {
 	log.Infof("GRPC: RunWorkload")
@@ -335,7 +329,7 @@ func (s *MinionServer) RunWorkload(_ context.Context, in *proto.MinionRunWorkloa
 	if s.workload != nil && s.workload.workload.IsRunning() {
 		return &proto.MinionRunWorkloadResponse{
 			Status: &proto.GeneralStatus{
-				IsOk: false,
+				IsOk:          false,
 				FailureReason: "Server is busy running workload",
 			},
 		}, nil
@@ -552,7 +546,7 @@ func (s *MinionServer) GetWorkloadInfo(_ context.Context, in *proto.MinionGetWor
 				Concurrency:   int32(s.workload.concurrency),
 				BatchSize:     int32(s.workload.batchSize),
 			},
-			IsRunning:     s.workload.workload.IsRunning(),
+			IsRunning: s.workload.workload.IsRunning(),
 		}, nil
 	}
 }

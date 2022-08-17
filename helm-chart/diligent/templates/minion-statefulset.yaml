@@ -29,7 +29,7 @@ spec:
               containerPort: 5711
               protocol: TCP
           command: ["/diligent/minion"]
-          args: ["--boss", "$(BOSS_SERVICE_NAME):5710", "--advertiseHost", "$(MY_POD_NAME).$(MY_HEADLESS_SERVICE_NAME)"]
+          args: ["--boss", "$(BOSS_SERVICE_NAME)", "--advertise-addr", "$(MY_POD_NAME).$(MY_HEADLESS_SERVICE_NAME)"]
           env:
             - name: MY_POD_NAME
               valueFrom:

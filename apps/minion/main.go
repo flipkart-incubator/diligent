@@ -3,35 +3,62 @@ package main
 import (
 	"flag"
 	log "github.com/sirupsen/logrus"
+	"net"
 )
 
 const (
-	defaultHost     = ""
-	defaultGrpcPort = ":5711"
-	defaultMetricsPort = ":9090"
+	defaultGrpcHost    = ""
+	defaultGrpcPort    = "5711"
+	defaultMetricsPort = "9090"
+	defaultBossPort    = "5710"
 )
 
 func main() {
+	// Construct default address from host and port
+	defaultGrpcAddr := net.JoinHostPort(defaultGrpcHost, defaultGrpcPort)
+	defaultMetricsAddr := net.JoinHostPort(defaultGrpcHost, defaultMetricsPort)
+
 	// Parse command line options
-	host := flag.String("host", defaultHost, "listening host")
-	grpcPort := flag.String("grpc-port", defaultGrpcPort, "grpc port")
-	metricsPort := flag.String("metrics-port", defaultMetricsPort, "metrics port")
-	advertiseHost := flag.String("advertiseHost", defaultHost, "self host to advertise externally")
-	advertisePort := flag.String("advertisePort", defaultGrpcPort, "self port to advertise externally")
-	boss := flag.String("boss", "", "boss host:port")
+	grpcAddr := flag.String("grpc-addr", defaultGrpcAddr, "listening host[:port] for gRPC connections")
+	metricsAddr := flag.String("metrics-addr", defaultMetricsAddr, "listening host[:port] for metrics scraping")
+	advertiseAddr := flag.String("advertise-addr", defaultGrpcAddr, "gRPC host[:port] to advertise externally")
+	bossAddr := flag.String("boss", "", "boss host[:port]")
 	flag.Parse()
 
-	log.Printf("Starting server. Host=%s, grpcPort=%s, metricsPort=%s, boss=%s, advertiseHost=%s",
-		*host, *grpcPort, *metricsPort, *boss, *advertiseHost)
+	log.Infof("Starting minion process. grpc-addr=%s, metrics-addr=%s, advertise-addr=%s, boss-addr=%s",
+		*grpcAddr, *metricsAddr, *advertiseAddr, *bossAddr)
 
-	if *boss == "" {
+	if *bossAddr == "" {
 		log.Fatal("required argument boss not provided")
 	}
-	if *advertiseHost == "" {
-		log.Fatal("required argument advertiseHost not provided")
+	if *advertiseAddr == "" {
+		log.Fatal("required argument advertise-addr not provided")
 	}
 
-	minion := NewMinionServer(*host, *grpcPort, *metricsPort, *boss, *advertiseHost, *advertisePort)
+	// If no port is specified for gRPC listener, use default gRPC port
+	if _, _, err := net.SplitHostPort(*grpcAddr); err != nil {
+		*grpcAddr = net.JoinHostPort(*grpcAddr, defaultGrpcPort)
+	}
+
+	// If no port is specified for advertise addr, use default gRPC port
+	if _, _, err := net.SplitHostPort(*advertiseAddr); err != nil {
+		*advertiseAddr = net.JoinHostPort(*advertiseAddr, defaultGrpcPort)
+	}
+
+	// If no port is specified for metrics listener, use default metrics port
+	if _, _, err := net.SplitHostPort(*metricsAddr); err != nil {
+		*metricsAddr = net.JoinHostPort(*metricsAddr, defaultMetricsPort)
+	}
+
+	// If no port is specified for boss, use default boss port
+	if _, _, err := net.SplitHostPort(*bossAddr); err != nil {
+		*bossAddr = net.JoinHostPort(*bossAddr, defaultBossPort)
+	}
+
+	log.Infof("Creating minion server instance. grpc-addr=%s, metrics-addr=%s, advertise-addr=%s, boss-addr=%s",
+		*grpcAddr, *metricsAddr, *advertiseAddr, *bossAddr)
+
+	minion := NewMinionServer(*grpcAddr, *metricsAddr, *advertiseAddr, *bossAddr)
 	err := minion.RegisterWithBoss()
 	if err != nil {
 		log.Fatal(err)

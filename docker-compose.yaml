@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: Minion.Dockerfile
     image: diligent/minion:latest
-    command: ["/diligent/minion", "--boss", "boss:5710", "--advertiseHost", "minion0"]
+    command: ["/diligent/minion", "--boss", "boss", "--advertise-addr", "minion0"]
     networks:
       - diligent
 
