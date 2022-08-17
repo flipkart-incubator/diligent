@@ -15,7 +15,9 @@ import (
 
 const (
 	minionConnIdleTimeoutSecs = 600
-	minionMaxLifetimeSecs     = 600
+	minionConnMaxLifetimeSecs = 600
+	minionDialTimeoutSecs     = 3
+	minionRequestTimeout      = 5
 )
 
 type BossServer struct {
@@ -64,7 +66,7 @@ func (s *BossServer) Serve() error {
 	return nil
 }
 
-func (s *BossServer) Ping(context.Context, *proto.BossPingRequest) (*proto.BossPingResponse, error) {
+func (s *BossServer) Ping(_ context.Context, _ *proto.BossPingRequest) (*proto.BossPingResponse, error) {
 	log.Infof("GRPC: Ping")
 	s.mut.Lock()
 	defer s.mut.Unlock()
@@ -89,7 +91,7 @@ func (s *BossServer) RegisterMinion(_ context.Context, in *proto.BossRegisterMin
 	// Factory method for pool
 	var factory grpcpool.Factory = func() (*grpc.ClientConn, error) {
 		log.Infof("grpcpool.Factory(): Trying to connect to minion %s", url)
-		dialCtx, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		dialCtx, dialCancel := context.WithTimeout(context.Background(), minionDialTimeoutSecs*time.Second)
 		defer dialCancel()
 		conn, err := grpc.DialContext(dialCtx, url, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
@@ -101,7 +103,7 @@ func (s *BossServer) RegisterMinion(_ context.Context, in *proto.BossRegisterMin
 	}
 
 	// Create an empty connection pool (don't try to establish connection right now as minion may not be ready)
-	pool, err := grpcpool.New(factory, 0, 1, minionConnIdleTimeoutSecs*time.Second, minionMaxLifetimeSecs*time.Second)
+	pool, err := grpcpool.New(factory, 0, 1, minionConnIdleTimeoutSecs*time.Second, minionConnMaxLifetimeSecs*time.Second)
 	if err != nil {
 		log.Errorf("GRPC: RegisterMinion(%s): Failed to create pool (%s)", url, err.Error())
 		return &proto.BossRegisterMinionResponse{
@@ -280,10 +282,7 @@ func (s *BossServer) getConnectionForMinion(ctx context.Context, minionUrl strin
 }
 
 func (s *BossServer) getMinionStatus(ctx context.Context, minionUrl string) *proto.MinionStatus {
-	getClientCtx, getClientCtxCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer getClientCtxCancel()
-
-	minionConnection, err := s.getConnectionForMinion(getClientCtx, minionUrl)
+	minionConnection, err := s.getConnectionForMinion(ctx, minionUrl)
 	if err != nil {
 		reason := fmt.Sprintf("failed to get client for minion %s (%s)", minionUrl, err.Error())
 		log.Errorf("getMinionStatus(): %s", reason)
@@ -298,7 +297,7 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionUrl string) *pro
 	defer minionConnection.Close()
 
 	// Ping Minion
-	pingCtx, pingCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	pingCtx, pingCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	defer pingCtxCancel()
 	minionClient := proto.NewMinionClient(minionConnection)
 	_, err = minionClient.Ping(pingCtx, &proto.MinionPingRequest{})
@@ -325,7 +324,7 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionUrl string) *pro
 }
 
 func (s *BossServer) loadDataSpecOnMinion(ctx context.Context, dataSpec *proto.DataSpec, minionUrl string, minionClient proto.MinionClient) error {
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	loadDataSpecResponse, err := minionClient.LoadDataSpec(grpcCtx, &proto.MinionLoadDataSpecRequest{
 		DataSpec: dataSpec,
 	})
@@ -344,7 +343,7 @@ func (s *BossServer) loadDataSpecOnMinion(ctx context.Context, dataSpec *proto.D
 }
 
 func (s *BossServer) openDbConnectionOnMinion(ctx context.Context, dbSpec *proto.DBSpec, minionUrl string, minionClient proto.MinionClient) error {
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	openDbConnResponse, err := minionClient.OpenDBConnection(grpcCtx, &proto.MinionOpenDBConnectionRequest{
 		DbSpec: dbSpec,
 	})
@@ -361,7 +360,7 @@ func (s *BossServer) openDbConnectionOnMinion(ctx context.Context, dbSpec *proto
 }
 
 func (s *BossServer) startWorkloadOnMinion(ctx context.Context, wlSpec *proto.WorkloadSpec, minionUrl string, minionClient proto.MinionClient) error {
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	openDbConnResponse, err := minionClient.RunWorkload(grpcCtx, &proto.MinionRunWorkloadRequest{
 		WorkloadSpec: wlSpec,
 	})
@@ -416,7 +415,7 @@ func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, url string) error
 	minionClient := proto.NewMinionClient(minionConnection)
 
 	// Stop workload
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	stopWorkloadResponse, err := minionClient.StopWorkload(grpcCtx, &proto.MinionStopWorkloadRequest{})
 	grpcCtxCancel()
 
