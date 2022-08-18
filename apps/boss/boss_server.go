@@ -169,7 +169,7 @@ func (s *BossServer) ShowMinions(ctx context.Context, _ *proto.BossShowMinionReq
 	}
 
 	return &proto.BossShowMinionResponse{
-		Minions: minionStatuses,
+		MinionStatuses: minionStatuses,
 	}, nil
 }
 
@@ -193,7 +193,7 @@ func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadR
 		reason := fmt.Sprintf("invalid workload '%s'", workloadName)
 		log.Infof("RunWorkload(): %s", reason)
 		return &proto.BossRunWorkloadResponse{
-			Status: &proto.GeneralStatus{
+			OverallStatus: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: reason,
 			},
@@ -203,6 +203,9 @@ func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadR
 
 	// Run the workload
 	log.Infof("RunWorkload(): Now starting to run workload")
+	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
+	ch := make(chan *proto.MinionStatus)
+
 	i := 0
 	for url := range s.minionPools {
 		log.Infof("RunWorkload(): Triggering on Minion %s", url)
@@ -215,29 +218,31 @@ func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadR
 			BatchSize:     in.GetWlSpec().GetBatchSize(),
 		}
 
-		err := s.runWorkloadOnMinion(ctx, url, in.GetDataSpec(), in.DbSpec, wlSpec)
+		go s.runWorkloadOnMinion(ctx, url, in.GetDataSpec(), in.DbSpec, wlSpec, ch)
 		i++
-
-		if err != nil {
-			reason := fmt.Sprintf("Failed to run workload on %s (%s)", url, err.Error())
-			log.Errorf("RunWorkload(): %s", reason)
-			return &proto.BossRunWorkloadResponse{
-				Status: &proto.GeneralStatus{
-					IsOk:          false,
-					FailureReason: reason,
-				},
-			}, fmt.Errorf(reason)
-		}
-
-		log.Infof("RunWorkload(): Run workload request to %s successful", url)
 	}
 
-	log.Infof("RunWorkload(): Run started successfully")
+	// Collect execution results
+	for i, _ = range minionStatuses {
+		minionStatuses[i] = <-ch
+	}
+
+	// Build overall status
+	overallStatus := proto.GeneralStatus{
+		IsOk:          true,
+		FailureReason: "",
+	}
+	for _, ms := range minionStatuses {
+		if !ms.Status.IsOk {
+			overallStatus.IsOk = false
+			overallStatus.FailureReason = "errors encountered on one or more minions"
+		}
+	}
+
+	log.Infof("RunWorkload(): completed")
 	return &proto.BossRunWorkloadResponse{
-		Status: &proto.GeneralStatus{
-			IsOk:          true,
-			FailureReason: "",
-		},
+		OverallStatus:  &overallStatus,
+		MinionStatuses: minionStatuses,
 	}, nil
 }
 
@@ -382,11 +387,18 @@ func (s *BossServer) startWorkloadOnMinion(ctx context.Context, wlSpec *proto.Wo
 }
 
 func (s *BossServer) runWorkloadOnMinion(ctx context.Context, url string,
-	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec) error {
+	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec, ch chan *proto.MinionStatus) {
 
 	minionConnection, err := s.getConnectionForMinion(ctx, url)
 	if err != nil {
-		return fmt.Errorf("failed to get client for minion %s (%s)", url, err.Error())
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: fmt.Sprintf("failed to get client: %s", err.Error()),
+			},
+		}
+		return
 	}
 	defer minionConnection.Close()
 
@@ -394,20 +406,47 @@ func (s *BossServer) runWorkloadOnMinion(ctx context.Context, url string,
 
 	err = s.loadDataSpecOnMinion(ctx, dataSpec, url, minionClient)
 	if err != nil {
-		return err
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}
+		return
 	}
 
 	err = s.openDbConnectionOnMinion(ctx, dbSpec, url, minionClient)
 	if err != nil {
-		return err
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}
+		return
 	}
 
 	err = s.startWorkloadOnMinion(ctx, wlSpec, url, minionClient)
 	if err != nil {
-		return err
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}
+		return
 	}
 
-	return nil
+	ch <- &proto.MinionStatus{
+		Url: url,
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+	}
+	return
 }
 
 func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, url string) error {

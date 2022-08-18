@@ -186,11 +186,11 @@ func bossShowMinions(c *grumble.Context) error {
 		c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	}
 
-	for _, minionStatus := range res.Minions {
-		if minionStatus.GetStatus().GetIsOk() {
-			c.App.Printf("%s : Reachable\n", minionStatus.GetUrl())
+	for _, ms := range res.GetMinionStatuses() {
+		if ms.GetStatus().GetIsOk() {
+			c.App.Printf("%s : Reachable\n", ms.GetUrl())
 		} else {
-			c.App.Printf("%s : Not Reachable [reason=%s]\n", minionStatus.GetUrl(), minionStatus.GetStatus().GetFailureReason())
+			c.App.Printf("%s : Not Reachable [reason=%s]\n", ms.GetUrl(), ms.GetStatus().GetFailureReason())
 		}
 	}
 	return nil
@@ -279,7 +279,7 @@ func bossRunWorkload(c *grumble.Context) error {
 		return err
 	}
 
-	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
 	res, err := bossClient.RunWorkload(grpcCtx, &proto.BossRunWorkloadRequest{
 		DataSpec: proto.DataSpecToProto(dataSpec),
@@ -302,9 +302,16 @@ func bossRunWorkload(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		return err
 	}
-	if res.GetStatus().GetIsOk() != true {
+	if res.GetOverallStatus().GetIsOk() != true {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
-		return fmt.Errorf(res.GetStatus().GetFailureReason())
+		for _, ms := range res.GetMinionStatuses() {
+			if ms.GetStatus().GetIsOk() {
+				c.App.Printf("%s : OK\n", ms.GetUrl())
+			} else {
+				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetUrl(), ms.GetStatus().GetFailureReason())
+			}
+		}
+		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
 	}
 	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	return nil
@@ -339,7 +346,7 @@ func getBossClient(bossAddr string) (proto.BossClient, error) {
 		bossAddr = net.JoinHostPort(bossAddr, defaultBossPort)
 	}
 
-	connCtx, connCtxCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
+	connCtx, connCtxCancel := context.WithTimeout(context.Background(), bossConnectionTimeoutSecs*time.Second)
 	conn, err := grpc.DialContext(connCtx, bossAddr, grpc.WithInsecure(), grpc.WithBlock())
 	connCtxCancel()
 	if err != nil {

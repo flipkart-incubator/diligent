@@ -45,7 +45,7 @@ message BossShowMinionRequest {
 }
 
 message BossShowMinionResponse {
-  repeated MinionStatus minions = 1;
+  repeated MinionStatus minion_statuses = 1;
 }
 
 message MinionStatus {
@@ -60,7 +60,8 @@ message BossRunWorkloadRequest {
 }
 
 message BossRunWorkloadResponse {
-  GeneralStatus status = 1;
+  GeneralStatus overall_status = 1;
+  repeated MinionStatus minion_statuses = 2;
 }
 
 message BossStopWorkloadRequest {
