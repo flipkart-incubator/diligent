@@ -249,24 +249,36 @@ func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadR
 func (s *BossServer) StopWorkload(ctx context.Context, _ *proto.BossStopWorkloadRequest) (*proto.BossStopWorkloadResponse, error) {
 	log.Infof("GRPC: StopWorkload()")
 
+	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
+	ch := make(chan *proto.MinionStatus)
+
 	for url := range s.minionPools {
-		err := s.stopWorkloadOnMinion(ctx, url)
-		if err != nil {
-			return &proto.BossStopWorkloadResponse{
-				Status: &proto.GeneralStatus{
-					IsOk:          false,
-					FailureReason: err.Error(),
-				},
-			}, err
+		log.Infof("StopWorkload(): Stopping on Minion %s", url)
+
+		go s.stopWorkloadOnMinion(ctx, url, ch)
+	}
+
+	// Collect execution results
+	for i, _ := range minionStatuses {
+		minionStatuses[i] = <-ch
+	}
+
+	// Build overall status
+	overallStatus := proto.GeneralStatus{
+		IsOk:          true,
+		FailureReason: "",
+	}
+	for _, ms := range minionStatuses {
+		if !ms.Status.IsOk {
+			overallStatus.IsOk = false
+			overallStatus.FailureReason = "errors encountered on one or more minions"
 		}
 	}
 
-	log.Infof("StopWorkload(): Stopped successfully")
+	log.Infof("StopWorkload(): completed")
 	return &proto.BossStopWorkloadResponse{
-		Status: &proto.GeneralStatus{
-			IsOk:          true,
-			FailureReason: "",
-		},
+		OverallStatus:  &overallStatus,
+		MinionStatuses: minionStatuses,
 	}, nil
 }
 
@@ -449,10 +461,17 @@ func (s *BossServer) runWorkloadOnMinion(ctx context.Context, url string,
 	return
 }
 
-func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, url string) error {
+func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, url string, ch chan *proto.MinionStatus) {
 	minionConnection, err := s.getConnectionForMinion(ctx, url)
 	if err != nil {
-		return fmt.Errorf("failed to get client for minion %s (%s)", url, err.Error())
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: fmt.Sprintf("failed to get client: %s", err.Error()),
+			},
+		}
+		return
 	}
 	defer minionConnection.Close()
 
@@ -464,12 +483,32 @@ func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, url string) error
 	grpcCtxCancel()
 
 	if err != nil {
-		return fmt.Errorf("request to %s failed (%v)", url, err)
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}
+		return
 	}
 
 	if stopWorkloadResponse.GetStatus().GetIsOk() != true {
-		return fmt.Errorf("request to %s failed (%s)", url, stopWorkloadResponse.GetStatus().GetFailureReason())
+		ch <- &proto.MinionStatus{
+			Url: url,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: stopWorkloadResponse.GetStatus().GetFailureReason(),
+			},
+		}
+		return
 	}
 
-	return nil
+	ch <- &proto.MinionStatus{
+		Url: url,
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+	}
+	return
 }

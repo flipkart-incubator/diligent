@@ -68,5 +68,6 @@ message BossStopWorkloadRequest {
 }
 
 message BossStopWorkloadResponse {
-  GeneralStatus status = 1;
+  GeneralStatus overall_status = 1;
+  repeated MinionStatus minion_statuses = 2;
 }

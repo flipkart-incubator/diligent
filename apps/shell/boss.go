@@ -333,9 +333,16 @@ func bossStopWorkload(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		return err
 	}
-	if res.GetStatus().GetIsOk() != true {
+	if res.GetOverallStatus().GetIsOk() != true {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
-		return fmt.Errorf(res.GetStatus().GetFailureReason())
+		for _, ms := range res.GetMinionStatuses() {
+			if ms.GetStatus().GetIsOk() {
+				c.App.Printf("%s : OK\n", ms.GetUrl())
+			} else {
+				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetUrl(), ms.GetStatus().GetFailureReason())
+			}
+		}
+		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
 	}
 	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	return nil

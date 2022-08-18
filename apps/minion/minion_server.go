@@ -560,5 +560,10 @@ func (s *MinionServer) StopWorkload(_ context.Context, in *proto.MinionStopWorkl
 		s.workload.workload.Cancel()
 		s.workload.workload.Wait()
 	}
-	return &proto.MinionStopWorkloadResponse{}, nil
+
+	return &proto.MinionStopWorkloadResponse{
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+	}, nil
 }
