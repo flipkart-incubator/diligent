@@ -174,7 +174,7 @@ func bossShowMinions(c *grumble.Context) error {
 		return err
 	}
 
-	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 20*time.Second)
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
 	res, err := bossClient.ShowMinions(grpcCtx, &proto.BossShowMinionRequest{})
 	reqDuration := time.Since(reqStart)

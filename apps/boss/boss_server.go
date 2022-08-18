@@ -157,11 +157,15 @@ func (s *BossServer) ShowMinions(ctx context.Context, _ *proto.BossShowMinionReq
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	minionStatuses := make([]*proto.MinionStatus, 0)
+	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
+	ch := make(chan *proto.MinionStatus)
 
 	for url := range s.minionPools {
-		minionStatus := s.getMinionStatus(ctx, url)
-		minionStatuses = append(minionStatuses, minionStatus)
+		go s.getMinionStatus(ctx, url, ch)
+	}
+
+	for i, _ := range minionStatuses {
+		minionStatuses[i] = <-ch
 	}
 
 	return &proto.BossShowMinionResponse{
@@ -280,40 +284,42 @@ func (s *BossServer) getConnectionForMinion(ctx context.Context, minionUrl strin
 	return conn, nil
 }
 
-func (s *BossServer) getMinionStatus(ctx context.Context, minionUrl string) *proto.MinionStatus {
+func (s *BossServer) getMinionStatus(ctx context.Context, minionUrl string, ch chan *proto.MinionStatus) {
 	minionConnection, err := s.getConnectionForMinion(ctx, minionUrl)
 	if err != nil {
 		reason := fmt.Sprintf("failed to get client for minion %s (%s)", minionUrl, err.Error())
 		log.Errorf("getMinionStatus(): %s", reason)
-		return &proto.MinionStatus{
+		ch <- &proto.MinionStatus{
 			Url: minionUrl,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: reason,
 			},
 		}
+		return
 	}
 	defer minionConnection.Close()
+	minionClient := proto.NewMinionClient(minionConnection)
 
 	// Ping Minion
 	pingCtx, pingCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	defer pingCtxCancel()
-	minionClient := proto.NewMinionClient(minionConnection)
 	_, err = minionClient.Ping(pingCtx, &proto.MinionPingRequest{})
 	if err != nil {
 		reason := fmt.Sprintf("gRPC request to %s failed (%v)", minionUrl, err)
 		log.Errorf("getMinionStatus(): %s", reason)
-		return &proto.MinionStatus{
+		ch <- &proto.MinionStatus{
 			Url: minionUrl,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: reason,
 			},
 		}
+		return
 	}
 
 	log.Infof("getMinionStatus(): Ping request to %s successful", minionUrl)
-	return &proto.MinionStatus{
+	ch <- &proto.MinionStatus{
 		Url: minionUrl,
 		Status: &proto.GeneralStatus{
 			IsOk:          true,
