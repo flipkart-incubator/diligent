@@ -26,22 +26,16 @@ func Partition(n, p int) []int {
 
 	output := make([]int, numPartitions)
 
-	// Check if n is exactly divisible by numPartitions
-	if (n % numPartitions) == 0 {
-		// Yes, so its just numPartitions partitions all of size n/numPartitions
-		partitionSize := n / numPartitions
-		for i := 0; i < len(output); i++ {
-			output[i] = partitionSize
-		}
-	} else {
-		// No, so create numPartitions-1 partitions of size floor(n/numPartitions)
-		// then create last partition with remaining size
-		partitionSize := n / numPartitions
-		for i := 0; i < len(output) - 1; i++ {
-			output[i] = partitionSize
-		}
-		output[len(output) - 1] = n - (partitionSize * (numPartitions-1))
-	}
+	// Get the remainder and quotient of dividing n by numPartitions
+	q := n / numPartitions
+	r := n % numPartitions
 
+	// Now exactly r partitions should be of size q+1, others should be of size q
+	for i := 0; i < r; i++ {
+		output[i] = q + 1
+	}
+	for i := r; i < numPartitions; i++ {
+		output[i] = q
+	}
 	return output
 }

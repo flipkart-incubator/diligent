@@ -63,18 +63,18 @@ func TestRangePartition1(t *testing.T) {
 		r1.Partition(3))
 
 	assert.Equal(t, []*Range{
-		NewRange(0, 1),
-		NewRange(1, 2),
-		NewRange(2, 3),
-		NewRange(3, 6)},
+		NewRange(0, 2),
+		NewRange(2, 4),
+		NewRange(4, 5),
+		NewRange(5, 6)},
 		r1.Partition(4))
 
 	assert.Equal(t, []*Range{
-		NewRange(0, 1),
-		NewRange(1, 2),
+		NewRange(0, 2),
 		NewRange(2, 3),
 		NewRange(3, 4),
-		NewRange(4, 6)},
+		NewRange(4, 5),
+		NewRange(5, 6)},
 		r1.Partition(5))
 
 	assert.Equal(t, []*Range{
@@ -100,10 +100,10 @@ func TestRangePartition2(t *testing.T) {
 	// Test cases for a large partition
 	r1 := NewRange(0, 317)
 	assert.Equal(t, []*Range{
-		NewRange(0, 105),
-		NewRange(105, 210),
-		NewRange(210, 317)},
-	r1.Partition(3))
+		NewRange(0, 106),
+		NewRange(106, 212),
+		NewRange(212, 317)},
+		r1.Partition(3))
 }
 
 func TestDuplicate(t *testing.T) {
@@ -122,7 +122,7 @@ func TestRand(t *testing.T) {
 	a := make([]bool, 5)
 	r := NewRange(0, len(a))
 
-	for i := 0; i < len(a) * 10; i++ {
+	for i := 0; i < len(a)*10; i++ {
 		// Will panic if Rand() generates any value out of the range
 		a[r.Rand()] = true
 	}
