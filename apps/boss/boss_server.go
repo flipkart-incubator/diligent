@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
 	"github.com/processout/grpc-go-pool"
@@ -70,7 +71,14 @@ func (s *BossServer) Ping(_ context.Context, _ *proto.BossPingRequest) (*proto.B
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	return &proto.BossPingResponse{}, nil
+	return &proto.BossPingResponse{
+		BuildInfo: &proto.BuildInfo{
+			Version:    buildinfo.Version,
+			CommitHash: buildinfo.CommitHash,
+			GoVersion:  buildinfo.GoVersion,
+			BuildTime:  buildinfo.BuildTime,
+		},
+	}, nil
 }
 
 func (s *BossServer) RegisterMinion(_ context.Context, in *proto.BossRegisterMinionRequest) (*proto.BossRegisterMinionResponse, error) {
@@ -157,19 +165,31 @@ func (s *BossServer) ShowMinions(ctx context.Context, _ *proto.BossShowMinionReq
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
+	// Collect minion statuses and buildinfos on separate channels
+	// NOTE:
+	// 	1. Only successful statuses will have an info in the channel
+	// 	2. Status and buildInfo need not be in same order
 	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
-	ch := make(chan *proto.MinionStatus)
+	minionBuildInfos := make([]*proto.MinionBuildInfo, 0)
+	statusCh := make(chan *proto.MinionStatus)
+	buildInfoCh := make(chan *proto.MinionBuildInfo)
 
 	for addr := range s.minionPools {
-		go s.getMinionStatus(ctx, addr, ch)
+		go s.getMinionStatus(ctx, addr, statusCh, buildInfoCh)
 	}
 
 	for i, _ := range minionStatuses {
-		minionStatuses[i] = <-ch
+		minionStatuses[i] = <-statusCh
+
+		// Collect build info for each successful status
+		if minionStatuses[i].GetStatus().GetIsOk() {
+			minionBuildInfos = append(minionBuildInfos, <-buildInfoCh)
+		}
 	}
 
 	return &proto.BossShowMinionResponse{
-		MinionStatuses: minionStatuses,
+		MinionStatuses:   minionStatuses,
+		MinionBuildInfos: minionBuildInfos,
 	}, nil
 }
 
@@ -301,12 +321,12 @@ func (s *BossServer) getConnectionForMinion(ctx context.Context, minionAddr stri
 	return conn, nil
 }
 
-func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, ch chan *proto.MinionStatus) {
+func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, statusCh chan *proto.MinionStatus, buildInfoCh chan *proto.MinionBuildInfo) {
 	minionConnection, err := s.getConnectionForMinion(ctx, minionAddr)
 	if err != nil {
 		reason := fmt.Sprintf("failed to get client for minion %s (%s)", minionAddr, err.Error())
 		log.Errorf("getMinionStatus(): %s", reason)
-		ch <- &proto.MinionStatus{
+		statusCh <- &proto.MinionStatus{
 			Addr: minionAddr,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
@@ -321,11 +341,11 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, ch 
 	// Ping Minion
 	pingCtx, pingCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	defer pingCtxCancel()
-	_, err = minionClient.Ping(pingCtx, &proto.MinionPingRequest{})
+	res, err := minionClient.Ping(pingCtx, &proto.MinionPingRequest{})
 	if err != nil {
 		reason := fmt.Sprintf("gRPC request to %s failed (%v)", minionAddr, err)
 		log.Errorf("getMinionStatus(): %s", reason)
-		ch <- &proto.MinionStatus{
+		statusCh <- &proto.MinionStatus{
 			Addr: minionAddr,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
@@ -336,12 +356,17 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, ch 
 	}
 
 	log.Infof("getMinionStatus(): Ping request to %s successful", minionAddr)
-	ch <- &proto.MinionStatus{
+	statusCh <- &proto.MinionStatus{
 		Addr: minionAddr,
 		Status: &proto.GeneralStatus{
 			IsOk:          true,
 			FailureReason: "",
 		},
+	}
+
+	buildInfoCh <- &proto.MinionBuildInfo{
+		Addr:      minionAddr,
+		BuildInfo: res.GetBuildInfo(),
 	}
 }
 

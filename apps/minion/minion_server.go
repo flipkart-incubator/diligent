@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	"github.com/flipkart-incubator/diligent/pkg/datagen"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/metrics"
@@ -136,7 +137,14 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	return &proto.MinionPingResponse{}, nil
+	return &proto.MinionPingResponse{
+		BuildInfo: &proto.BuildInfo{
+			Version:    buildinfo.Version,
+			CommitHash: buildinfo.CommitHash,
+			GoVersion:  buildinfo.GoVersion,
+			BuildTime:  buildinfo.BuildTime,
+		},
+	}, nil
 }
 
 func (s *MinionServer) LoadDataSpec(ctx context.Context, in *proto.MinionLoadDataSpecRequest) (*proto.MinionLoadDataSpecResponse, error) {

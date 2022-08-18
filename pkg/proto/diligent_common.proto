@@ -38,12 +38,6 @@ message TrSpec {
   string replacements = 2;
 }
 
-// A generic status information consisting of ok / not ok flag and a message to indicate reason for failure if any
-message GeneralStatus {
-  bool is_ok = 1;
-  string failure_reason = 2;
-}
-
 // Specification for DB connection
 message DBSpec {
   string driver = 1;
@@ -66,3 +60,16 @@ message Range {
   int32 limit = 2;
 }
 
+// A generic status information consisting of ok / not ok flag and a message to indicate reason for failure if any
+message GeneralStatus {
+  bool is_ok = 1;
+  string failure_reason = 2;
+}
+
+// General build information
+message BuildInfo {
+  string version = 1;
+  string commit_hash = 2;
+  string go_version = 3;
+  string build_time = 4;
+}

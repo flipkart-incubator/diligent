@@ -62,6 +62,8 @@ type BossPingResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
+
+	BuildInfo *BuildInfo `protobuf:"bytes,1,opt,name=build_info,json=buildInfo,proto3" json:"build_info,omitempty"`
 }
 
 func (x *BossPingResponse) Reset() {
@@ -94,6 +96,13 @@ func (x *BossPingResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use BossPingResponse.ProtoReflect.Descriptor instead.
 func (*BossPingResponse) Descriptor() ([]byte, []int) {
 	return file_diligent_boss_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *BossPingResponse) GetBuildInfo() *BuildInfo {
+	if x != nil {
+		return x.BuildInfo
+	}
+	return nil
 }
 
 type BossRegisterMinionRequest struct {
@@ -327,7 +336,8 @@ type BossShowMinionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MinionStatuses []*MinionStatus `protobuf:"bytes,1,rep,name=minion_statuses,json=minionStatuses,proto3" json:"minion_statuses,omitempty"`
+	MinionStatuses   []*MinionStatus    `protobuf:"bytes,1,rep,name=minion_statuses,json=minionStatuses,proto3" json:"minion_statuses,omitempty"`
+	MinionBuildInfos []*MinionBuildInfo `protobuf:"bytes,2,rep,name=minion_build_infos,json=minionBuildInfos,proto3" json:"minion_build_infos,omitempty"`
 }
 
 func (x *BossShowMinionResponse) Reset() {
@@ -369,6 +379,68 @@ func (x *BossShowMinionResponse) GetMinionStatuses() []*MinionStatus {
 	return nil
 }
 
+func (x *BossShowMinionResponse) GetMinionBuildInfos() []*MinionBuildInfo {
+	if x != nil {
+		return x.MinionBuildInfos
+	}
+	return nil
+}
+
+type MinionBuildInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Addr      string     `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
+	BuildInfo *BuildInfo `protobuf:"bytes,2,opt,name=build_info,json=buildInfo,proto3" json:"build_info,omitempty"`
+}
+
+func (x *MinionBuildInfo) Reset() {
+	*x = MinionBuildInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_diligent_boss_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MinionBuildInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MinionBuildInfo) ProtoMessage() {}
+
+func (x *MinionBuildInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_diligent_boss_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MinionBuildInfo.ProtoReflect.Descriptor instead.
+func (*MinionBuildInfo) Descriptor() ([]byte, []int) {
+	return file_diligent_boss_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *MinionBuildInfo) GetAddr() string {
+	if x != nil {
+		return x.Addr
+	}
+	return ""
+}
+
+func (x *MinionBuildInfo) GetBuildInfo() *BuildInfo {
+	if x != nil {
+		return x.BuildInfo
+	}
+	return nil
+}
+
 type MinionStatus struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -381,7 +453,7 @@ type MinionStatus struct {
 func (x *MinionStatus) Reset() {
 	*x = MinionStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_diligent_boss_proto_msgTypes[8]
+		mi := &file_diligent_boss_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -394,7 +466,7 @@ func (x *MinionStatus) String() string {
 func (*MinionStatus) ProtoMessage() {}
 
 func (x *MinionStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_diligent_boss_proto_msgTypes[8]
+	mi := &file_diligent_boss_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +479,7 @@ func (x *MinionStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MinionStatus.ProtoReflect.Descriptor instead.
 func (*MinionStatus) Descriptor() ([]byte, []int) {
-	return file_diligent_boss_proto_rawDescGZIP(), []int{8}
+	return file_diligent_boss_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MinionStatus) GetAddr() string {
@@ -437,7 +509,7 @@ type BossRunWorkloadRequest struct {
 func (x *BossRunWorkloadRequest) Reset() {
 	*x = BossRunWorkloadRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_diligent_boss_proto_msgTypes[9]
+		mi := &file_diligent_boss_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -450,7 +522,7 @@ func (x *BossRunWorkloadRequest) String() string {
 func (*BossRunWorkloadRequest) ProtoMessage() {}
 
 func (x *BossRunWorkloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_diligent_boss_proto_msgTypes[9]
+	mi := &file_diligent_boss_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +535,7 @@ func (x *BossRunWorkloadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BossRunWorkloadRequest.ProtoReflect.Descriptor instead.
 func (*BossRunWorkloadRequest) Descriptor() ([]byte, []int) {
-	return file_diligent_boss_proto_rawDescGZIP(), []int{9}
+	return file_diligent_boss_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *BossRunWorkloadRequest) GetDataSpec() *DataSpec {
@@ -499,7 +571,7 @@ type BossRunWorkloadResponse struct {
 func (x *BossRunWorkloadResponse) Reset() {
 	*x = BossRunWorkloadResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_diligent_boss_proto_msgTypes[10]
+		mi := &file_diligent_boss_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -512,7 +584,7 @@ func (x *BossRunWorkloadResponse) String() string {
 func (*BossRunWorkloadResponse) ProtoMessage() {}
 
 func (x *BossRunWorkloadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_diligent_boss_proto_msgTypes[10]
+	mi := &file_diligent_boss_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -525,7 +597,7 @@ func (x *BossRunWorkloadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BossRunWorkloadResponse.ProtoReflect.Descriptor instead.
 func (*BossRunWorkloadResponse) Descriptor() ([]byte, []int) {
-	return file_diligent_boss_proto_rawDescGZIP(), []int{10}
+	return file_diligent_boss_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *BossRunWorkloadResponse) GetOverallStatus() *GeneralStatus {
@@ -551,7 +623,7 @@ type BossStopWorkloadRequest struct {
 func (x *BossStopWorkloadRequest) Reset() {
 	*x = BossStopWorkloadRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_diligent_boss_proto_msgTypes[11]
+		mi := &file_diligent_boss_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -564,7 +636,7 @@ func (x *BossStopWorkloadRequest) String() string {
 func (*BossStopWorkloadRequest) ProtoMessage() {}
 
 func (x *BossStopWorkloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_diligent_boss_proto_msgTypes[11]
+	mi := &file_diligent_boss_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,7 +649,7 @@ func (x *BossStopWorkloadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BossStopWorkloadRequest.ProtoReflect.Descriptor instead.
 func (*BossStopWorkloadRequest) Descriptor() ([]byte, []int) {
-	return file_diligent_boss_proto_rawDescGZIP(), []int{11}
+	return file_diligent_boss_proto_rawDescGZIP(), []int{12}
 }
 
 type BossStopWorkloadResponse struct {
@@ -592,7 +664,7 @@ type BossStopWorkloadResponse struct {
 func (x *BossStopWorkloadResponse) Reset() {
 	*x = BossStopWorkloadResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_diligent_boss_proto_msgTypes[12]
+		mi := &file_diligent_boss_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -605,7 +677,7 @@ func (x *BossStopWorkloadResponse) String() string {
 func (*BossStopWorkloadResponse) ProtoMessage() {}
 
 func (x *BossStopWorkloadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_diligent_boss_proto_msgTypes[12]
+	mi := &file_diligent_boss_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +690,7 @@ func (x *BossStopWorkloadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BossStopWorkloadResponse.ProtoReflect.Descriptor instead.
 func (*BossStopWorkloadResponse) Descriptor() ([]byte, []int) {
-	return file_diligent_boss_proto_rawDescGZIP(), []int{12}
+	return file_diligent_boss_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *BossStopWorkloadResponse) GetOverallStatus() *GeneralStatus {
@@ -642,31 +714,44 @@ var file_diligent_boss_proto_rawDesc = []byte{
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x15, 0x64, 0x69,
 	0x6c, 0x69, 0x67, 0x65, 0x6e, 0x74, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x70, 0x72,
 	0x6f, 0x74, 0x6f, 0x22, 0x11, 0x0a, 0x0f, 0x42, 0x6f, 0x73, 0x73, 0x50, 0x69, 0x6e, 0x67, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x12, 0x0a, 0x10, 0x42, 0x6f, 0x73, 0x73, 0x50, 0x69,
-	0x6e, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2f, 0x0a, 0x19, 0x42, 0x6f,
-	0x73, 0x73, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x69, 0x6f, 0x6e,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x22, 0x4a, 0x0a, 0x1a, 0x42,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x43, 0x0a, 0x10, 0x42, 0x6f, 0x73, 0x73, 0x50, 0x69,
+	0x6e, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2f, 0x0a, 0x0a, 0x62, 0x75,
+	0x69, 0x6c, 0x64, 0x5f, 0x69, 0x6e, 0x66, 0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x10,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f,
+	0x52, 0x09, 0x62, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x22, 0x2f, 0x0a, 0x19, 0x42,
 	0x6f, 0x73, 0x73, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x69, 0x6f,
-	0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x06, 0x73, 0x74, 0x61,
-	0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
-	0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x30, 0x0a, 0x1a, 0x42, 0x6f, 0x73, 0x73, 0x55,
-	0x6e, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x6f, 0x6e, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x22, 0x4c, 0x0a, 0x1c, 0x42, 0x6f, 0x73,
-	0x73, 0x55, 0x6e, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x69, 0x6f,
-	0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x06, 0x73, 0x74, 0x61,
-	0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
-	0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x17, 0x0a, 0x15, 0x42, 0x6f, 0x73, 0x73, 0x53,
-	0x68, 0x6f, 0x77, 0x4d, 0x69, 0x6e, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x22, 0x56, 0x0a, 0x16, 0x42, 0x6f, 0x73, 0x73, 0x53, 0x68, 0x6f, 0x77, 0x4d, 0x69, 0x6e, 0x69,
-	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3c, 0x0a, 0x0f, 0x6d, 0x69,
-	0x6e, 0x69, 0x6f, 0x6e, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x65, 0x73, 0x18, 0x01, 0x20,
-	0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4d, 0x69, 0x6e, 0x69,
-	0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x0e, 0x6d, 0x69, 0x6e, 0x69, 0x6f, 0x6e,
-	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x65, 0x73, 0x22, 0x50, 0x0a, 0x0c, 0x4d, 0x69, 0x6e, 0x69,
+	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x22, 0x4a, 0x0a, 0x1a,
+	0x42, 0x6f, 0x73, 0x73, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x69,
+	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x06, 0x73, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
+	0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x30, 0x0a, 0x1a, 0x42, 0x6f, 0x73, 0x73,
+	0x55, 0x6e, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x6f, 0x6e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x22, 0x4c, 0x0a, 0x1c, 0x42, 0x6f,
+	0x73, 0x73, 0x55, 0x6e, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x4d, 0x69, 0x6e, 0x69,
+	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x06, 0x73, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
+	0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x17, 0x0a, 0x15, 0x42, 0x6f, 0x73, 0x73,
+	0x53, 0x68, 0x6f, 0x77, 0x4d, 0x69, 0x6e, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x22, 0x9c, 0x01, 0x0a, 0x16, 0x42, 0x6f, 0x73, 0x73, 0x53, 0x68, 0x6f, 0x77, 0x4d, 0x69,
+	0x6e, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3c, 0x0a, 0x0f,
+	0x6d, 0x69, 0x6e, 0x69, 0x6f, 0x6e, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x65, 0x73, 0x18,
+	0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4d, 0x69,
+	0x6e, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x0e, 0x6d, 0x69, 0x6e, 0x69,
+	0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x65, 0x73, 0x12, 0x44, 0x0a, 0x12, 0x6d, 0x69,
+	0x6e, 0x69, 0x6f, 0x6e, 0x5f, 0x62, 0x75, 0x69, 0x6c, 0x64, 0x5f, 0x69, 0x6e, 0x66, 0x6f, 0x73,
+	0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4d,
+	0x69, 0x6e, 0x69, 0x6f, 0x6e, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x10,
+	0x6d, 0x69, 0x6e, 0x69, 0x6f, 0x6e, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x73,
+	0x22, 0x56, 0x0a, 0x0f, 0x4d, 0x69, 0x6e, 0x69, 0x6f, 0x6e, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x49,
+	0x6e, 0x66, 0x6f, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x12, 0x2f, 0x0a, 0x0a, 0x62, 0x75, 0x69, 0x6c, 0x64,
+	0x5f, 0x69, 0x6e, 0x66, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x10, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2e, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x09, 0x62,
+	0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x22, 0x50, 0x0a, 0x0c, 0x4d, 0x69, 0x6e, 0x69,
 	0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x12, 0x2c, 0x0a, 0x06,
 	0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x70,
@@ -748,7 +833,7 @@ func file_diligent_boss_proto_rawDescGZIP() []byte {
 	return file_diligent_boss_proto_rawDescData
 }
 
-var file_diligent_boss_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_diligent_boss_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_diligent_boss_proto_goTypes = []interface{}{
 	(*BossPingRequest)(nil),              // 0: proto.BossPingRequest
 	(*BossPingResponse)(nil),             // 1: proto.BossPingResponse
@@ -758,45 +843,50 @@ var file_diligent_boss_proto_goTypes = []interface{}{
 	(*BossUnregisterMinionResponse)(nil), // 5: proto.BossUnregisterMinionResponse
 	(*BossShowMinionRequest)(nil),        // 6: proto.BossShowMinionRequest
 	(*BossShowMinionResponse)(nil),       // 7: proto.BossShowMinionResponse
-	(*MinionStatus)(nil),                 // 8: proto.MinionStatus
-	(*BossRunWorkloadRequest)(nil),       // 9: proto.BossRunWorkloadRequest
-	(*BossRunWorkloadResponse)(nil),      // 10: proto.BossRunWorkloadResponse
-	(*BossStopWorkloadRequest)(nil),      // 11: proto.BossStopWorkloadRequest
-	(*BossStopWorkloadResponse)(nil),     // 12: proto.BossStopWorkloadResponse
-	(*GeneralStatus)(nil),                // 13: proto.GeneralStatus
-	(*DataSpec)(nil),                     // 14: proto.DataSpec
-	(*DBSpec)(nil),                       // 15: proto.DBSpec
-	(*WorkloadSpec)(nil),                 // 16: proto.WorkloadSpec
+	(*MinionBuildInfo)(nil),              // 8: proto.MinionBuildInfo
+	(*MinionStatus)(nil),                 // 9: proto.MinionStatus
+	(*BossRunWorkloadRequest)(nil),       // 10: proto.BossRunWorkloadRequest
+	(*BossRunWorkloadResponse)(nil),      // 11: proto.BossRunWorkloadResponse
+	(*BossStopWorkloadRequest)(nil),      // 12: proto.BossStopWorkloadRequest
+	(*BossStopWorkloadResponse)(nil),     // 13: proto.BossStopWorkloadResponse
+	(*BuildInfo)(nil),                    // 14: proto.BuildInfo
+	(*GeneralStatus)(nil),                // 15: proto.GeneralStatus
+	(*DataSpec)(nil),                     // 16: proto.DataSpec
+	(*DBSpec)(nil),                       // 17: proto.DBSpec
+	(*WorkloadSpec)(nil),                 // 18: proto.WorkloadSpec
 }
 var file_diligent_boss_proto_depIdxs = []int32{
-	13, // 0: proto.BossRegisterMinionResponse.status:type_name -> proto.GeneralStatus
-	13, // 1: proto.BossUnregisterMinionResponse.status:type_name -> proto.GeneralStatus
-	8,  // 2: proto.BossShowMinionResponse.minion_statuses:type_name -> proto.MinionStatus
-	13, // 3: proto.MinionStatus.status:type_name -> proto.GeneralStatus
-	14, // 4: proto.BossRunWorkloadRequest.data_spec:type_name -> proto.DataSpec
-	15, // 5: proto.BossRunWorkloadRequest.db_spec:type_name -> proto.DBSpec
-	16, // 6: proto.BossRunWorkloadRequest.wl_spec:type_name -> proto.WorkloadSpec
-	13, // 7: proto.BossRunWorkloadResponse.overall_status:type_name -> proto.GeneralStatus
-	8,  // 8: proto.BossRunWorkloadResponse.minion_statuses:type_name -> proto.MinionStatus
-	13, // 9: proto.BossStopWorkloadResponse.overall_status:type_name -> proto.GeneralStatus
-	8,  // 10: proto.BossStopWorkloadResponse.minion_statuses:type_name -> proto.MinionStatus
-	0,  // 11: proto.Boss.Ping:input_type -> proto.BossPingRequest
-	2,  // 12: proto.Boss.RegisterMinion:input_type -> proto.BossRegisterMinionRequest
-	4,  // 13: proto.Boss.UnregisterMinion:input_type -> proto.BossUnregisterMinonRequest
-	6,  // 14: proto.Boss.ShowMinions:input_type -> proto.BossShowMinionRequest
-	9,  // 15: proto.Boss.RunWorkload:input_type -> proto.BossRunWorkloadRequest
-	11, // 16: proto.Boss.StopWorkload:input_type -> proto.BossStopWorkloadRequest
-	1,  // 17: proto.Boss.Ping:output_type -> proto.BossPingResponse
-	3,  // 18: proto.Boss.RegisterMinion:output_type -> proto.BossRegisterMinionResponse
-	5,  // 19: proto.Boss.UnregisterMinion:output_type -> proto.BossUnregisterMinionResponse
-	7,  // 20: proto.Boss.ShowMinions:output_type -> proto.BossShowMinionResponse
-	10, // 21: proto.Boss.RunWorkload:output_type -> proto.BossRunWorkloadResponse
-	12, // 22: proto.Boss.StopWorkload:output_type -> proto.BossStopWorkloadResponse
-	17, // [17:23] is the sub-list for method output_type
-	11, // [11:17] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	14, // 0: proto.BossPingResponse.build_info:type_name -> proto.BuildInfo
+	15, // 1: proto.BossRegisterMinionResponse.status:type_name -> proto.GeneralStatus
+	15, // 2: proto.BossUnregisterMinionResponse.status:type_name -> proto.GeneralStatus
+	9,  // 3: proto.BossShowMinionResponse.minion_statuses:type_name -> proto.MinionStatus
+	8,  // 4: proto.BossShowMinionResponse.minion_build_infos:type_name -> proto.MinionBuildInfo
+	14, // 5: proto.MinionBuildInfo.build_info:type_name -> proto.BuildInfo
+	15, // 6: proto.MinionStatus.status:type_name -> proto.GeneralStatus
+	16, // 7: proto.BossRunWorkloadRequest.data_spec:type_name -> proto.DataSpec
+	17, // 8: proto.BossRunWorkloadRequest.db_spec:type_name -> proto.DBSpec
+	18, // 9: proto.BossRunWorkloadRequest.wl_spec:type_name -> proto.WorkloadSpec
+	15, // 10: proto.BossRunWorkloadResponse.overall_status:type_name -> proto.GeneralStatus
+	9,  // 11: proto.BossRunWorkloadResponse.minion_statuses:type_name -> proto.MinionStatus
+	15, // 12: proto.BossStopWorkloadResponse.overall_status:type_name -> proto.GeneralStatus
+	9,  // 13: proto.BossStopWorkloadResponse.minion_statuses:type_name -> proto.MinionStatus
+	0,  // 14: proto.Boss.Ping:input_type -> proto.BossPingRequest
+	2,  // 15: proto.Boss.RegisterMinion:input_type -> proto.BossRegisterMinionRequest
+	4,  // 16: proto.Boss.UnregisterMinion:input_type -> proto.BossUnregisterMinonRequest
+	6,  // 17: proto.Boss.ShowMinions:input_type -> proto.BossShowMinionRequest
+	10, // 18: proto.Boss.RunWorkload:input_type -> proto.BossRunWorkloadRequest
+	12, // 19: proto.Boss.StopWorkload:input_type -> proto.BossStopWorkloadRequest
+	1,  // 20: proto.Boss.Ping:output_type -> proto.BossPingResponse
+	3,  // 21: proto.Boss.RegisterMinion:output_type -> proto.BossRegisterMinionResponse
+	5,  // 22: proto.Boss.UnregisterMinion:output_type -> proto.BossUnregisterMinionResponse
+	7,  // 23: proto.Boss.ShowMinions:output_type -> proto.BossShowMinionResponse
+	11, // 24: proto.Boss.RunWorkload:output_type -> proto.BossRunWorkloadResponse
+	13, // 25: proto.Boss.StopWorkload:output_type -> proto.BossStopWorkloadResponse
+	20, // [20:26] is the sub-list for method output_type
+	14, // [14:20] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_diligent_boss_proto_init() }
@@ -903,7 +993,7 @@ func file_diligent_boss_proto_init() {
 			}
 		}
 		file_diligent_boss_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MinionStatus); i {
+			switch v := v.(*MinionBuildInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -915,7 +1005,7 @@ func file_diligent_boss_proto_init() {
 			}
 		}
 		file_diligent_boss_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BossRunWorkloadRequest); i {
+			switch v := v.(*MinionStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -927,7 +1017,7 @@ func file_diligent_boss_proto_init() {
 			}
 		}
 		file_diligent_boss_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BossRunWorkloadResponse); i {
+			switch v := v.(*BossRunWorkloadRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -939,7 +1029,7 @@ func file_diligent_boss_proto_init() {
 			}
 		}
 		file_diligent_boss_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BossStopWorkloadRequest); i {
+			switch v := v.(*BossRunWorkloadResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -951,6 +1041,18 @@ func file_diligent_boss_proto_init() {
 			}
 		}
 		file_diligent_boss_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BossStopWorkloadRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_diligent_boss_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BossStopWorkloadResponse); i {
 			case 0:
 				return &v.state
@@ -969,7 +1071,7 @@ func file_diligent_boss_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_diligent_boss_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

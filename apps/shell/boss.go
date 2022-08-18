@@ -97,7 +97,7 @@ func bossPing(c *grumble.Context) error {
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	_, err = bossClient.Ping(grpcCtx, &proto.BossPingRequest{})
+	res, err := bossClient.Ping(grpcCtx, &proto.BossPingRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCtxCancel()
 	if err != nil {
@@ -105,6 +105,10 @@ func bossPing(c *grumble.Context) error {
 		return err
 	} else {
 		c.App.Printf("OK [elapsed=%v]\n", reqDuration)
+		c.App.Printf("Version   : %s\n", res.GetBuildInfo().GetVersion())
+		c.App.Printf("CommitHash: %s\n", res.GetBuildInfo().GetCommitHash())
+		c.App.Printf("GoVersion : %s\n", res.GetBuildInfo().GetGoVersion())
+		c.App.Printf("BuildTime : %s\n", res.GetBuildInfo().GetBuildTime())
 	}
 	return nil
 }
@@ -186,12 +190,20 @@ func bossShowMinions(c *grumble.Context) error {
 		c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	}
 
+	c.App.Printf("Reachability status:\n")
 	for _, ms := range res.GetMinionStatuses() {
 		if ms.GetStatus().GetIsOk() {
-			c.App.Printf("%s : Reachable\n", ms.GetAddr())
+			c.App.Printf("\t%s : Reachable\n", ms.GetAddr())
 		} else {
-			c.App.Printf("%s : Not Reachable [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
+			c.App.Printf("\t%s : Not Reachable [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 		}
+	}
+
+	c.App.Printf("Build info:\n")
+	for _, bi := range res.GetMinionBuildInfos() {
+		c.App.Printf("%s : version=%s, commit-hash=%s, go-version=%s, build-time=%s\n",
+			bi.GetAddr(), bi.GetBuildInfo().GetVersion(), bi.GetBuildInfo().GetCommitHash(),
+			bi.GetBuildInfo().GoVersion, bi.GetBuildInfo().GetBuildTime())
 	}
 	return nil
 }

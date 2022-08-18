@@ -27,6 +27,7 @@ message MinionPingRequest {
 }
 
 message MinionPingResponse {
+  BuildInfo build_info = 1;
 }
 
 message MinionLoadDataSpecRequest {
