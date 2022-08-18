@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+const (
+	bossConnectionTimoutSecs = 5
+	bossRequestTimeoutSecs   = 5
+)
+
 type DataContext struct {
 	dataSpecName string
 	dataSpec     *datagen.Spec
@@ -76,7 +81,7 @@ func (s *MinionServer) RegisterWithBoss() error {
 	var conn *grpc.ClientConn
 	var err error
 	for {
-		dialCtx, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		dialCtx, dialCancel := context.WithTimeout(context.Background(), bossConnectionTimoutSecs*time.Second)
 		conn, err = grpc.DialContext(dialCtx, s.bossAddr, grpc.WithInsecure(), grpc.WithBlock())
 		dialCancel()
 		if err != nil {
@@ -86,8 +91,8 @@ func (s *MinionServer) RegisterWithBoss() error {
 
 		bossClient := proto.NewBossClient(conn)
 
-		grcpCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, err = bossClient.RegisterMinion(grcpCtx, &proto.BossRegisterMinionRequest{Url: s.advertiseAddr})
+		grcpCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
+		_, err = bossClient.RegisterMinion(grcpCtx, &proto.BossRegisterMinionRequest{Addr: s.advertiseAddr})
 		grpcCancel()
 		if err != nil {
 			log.Errorf("Registration failed with error: (%v)\n", err)

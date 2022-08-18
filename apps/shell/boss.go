@@ -126,7 +126,7 @@ func bossRegisterMinion(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	_, err = bossClient.RegisterMinion(grpcCtx, &proto.BossRegisterMinionRequest{Url: minionAddr})
+	_, err = bossClient.RegisterMinion(grpcCtx, &proto.BossRegisterMinionRequest{Addr: minionAddr})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {
@@ -155,7 +155,7 @@ func bossUnregisterMinion(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinonRequest{Url: minionAddr})
+	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinonRequest{Addr: minionAddr})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {
@@ -188,9 +188,9 @@ func bossShowMinions(c *grumble.Context) error {
 
 	for _, ms := range res.GetMinionStatuses() {
 		if ms.GetStatus().GetIsOk() {
-			c.App.Printf("%s : Reachable\n", ms.GetUrl())
+			c.App.Printf("%s : Reachable\n", ms.GetAddr())
 		} else {
-			c.App.Printf("%s : Not Reachable [reason=%s]\n", ms.GetUrl(), ms.GetStatus().GetFailureReason())
+			c.App.Printf("%s : Not Reachable [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 		}
 	}
 	return nil
@@ -306,9 +306,9 @@ func bossRunWorkload(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		for _, ms := range res.GetMinionStatuses() {
 			if ms.GetStatus().GetIsOk() {
-				c.App.Printf("%s : OK\n", ms.GetUrl())
+				c.App.Printf("%s : OK\n", ms.GetAddr())
 			} else {
-				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetUrl(), ms.GetStatus().GetFailureReason())
+				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 			}
 		}
 		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
@@ -337,9 +337,9 @@ func bossStopWorkload(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		for _, ms := range res.GetMinionStatuses() {
 			if ms.GetStatus().GetIsOk() {
-				c.App.Printf("%s : OK\n", ms.GetUrl())
+				c.App.Printf("%s : OK\n", ms.GetAddr())
 			} else {
-				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetUrl(), ms.GetStatus().GetFailureReason())
+				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 			}
 		}
 		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())

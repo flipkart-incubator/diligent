@@ -26,7 +26,7 @@ message BossPingResponse {
 }
 
 message BossRegisterMinionRequest{
-  string url = 1;
+  string addr = 1;
 }
 
 message BossRegisterMinionResponse {
@@ -34,7 +34,7 @@ message BossRegisterMinionResponse {
 }
 
 message BossUnregisterMinonRequest {
-  string url = 1;
+  string addr = 1;
 }
 
 message BossUnregisterMinionResponse {
@@ -49,7 +49,7 @@ message BossShowMinionResponse {
 }
 
 message MinionStatus {
-  string url = 1;
+  string addr = 1;
   GeneralStatus status = 2;
 }
 
