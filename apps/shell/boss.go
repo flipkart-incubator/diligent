@@ -7,8 +7,13 @@ import (
 	"github.com/flipkart-incubator/diligent/pkg/datagen"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
 	"google.golang.org/grpc"
+	"net"
 	"strings"
 	"time"
+)
+
+const (
+	defaultBossPort = "5710"
 )
 
 func init() {
@@ -17,47 +22,41 @@ func init() {
 		Help:    "work with the boss",
 		Aliases: []string{"bs"},
 	}
-	grumbleShell.AddCommand(bossCmd)
+	grumbleApp.AddCommand(bossCmd)
 
 	bossPingCmd := &grumble.Command{
 		Name: "ping",
 		Help: "ping the boss",
-		Flags: func(f *grumble.Flags) {
-			f.String("b", "boss-url", "", "URL of boss server")
-		},
-		Run: bossPing,
+		Run:  bossPing,
 	}
 	bossCmd.AddCommand(bossPingCmd)
 
-	bossMinionRegisterCmd := &grumble.Command{
-		Name: "register-minion",
-		Help: "register a minion with the boss",
-		Flags: func(f *grumble.Flags) {
-			f.String("b", "boss-url", "", "URL of boss server")
-			f.String("m", "minion-url", "", "URL of minion server")
-		},
-		Run: bossRegisterMinion,
-	}
-	bossCmd.AddCommand(bossMinionRegisterCmd)
-
-	bossMinionUnregisterCmd := &grumble.Command{
-		Name: "unregister-minion",
-		Help: "unregister a minion with the boss",
-		Flags: func(f *grumble.Flags) {
-			f.String("b", "boss-url", "", "URL of boss server")
-			f.String("m", "minion-url", "", "URL of minion server")
-		},
-		Run: bossUnregisterMinion,
-	}
-	bossCmd.AddCommand(bossMinionUnregisterCmd)
+	//bossMinionRegisterCmd := &grumble.Command{
+	//	Name: "register-minion",
+	//	Help: "register a minion with the boss",
+	//	Flags: func(f *grumble.Flags) {
+	//		f.String("b", "boss-url", "", "URL of boss server")
+	//		f.String("m", "minion-url", "", "URL of minion server")
+	//	},
+	//	Run: bossRegisterMinion,
+	//}
+	//bossCmd.AddCommand(bossMinionRegisterCmd)
+	//
+	//bossMinionUnregisterCmd := &grumble.Command{
+	//	Name: "unregister-minion",
+	//	Help: "unregister a minion with the boss",
+	//	Flags: func(f *grumble.Flags) {
+	//		f.String("b", "boss-url", "", "URL of boss server")
+	//		f.String("m", "minion-url", "", "URL of minion server")
+	//	},
+	//	Run: bossUnregisterMinion,
+	//}
+	//bossCmd.AddCommand(bossMinionUnregisterCmd)
 
 	bossMinionShowCmd := &grumble.Command{
 		Name: "show-minions",
 		Help: "show minions registered with the boss",
-		Flags: func(f *grumble.Flags) {
-			f.String("b", "boss-url", "", "URL of boss server")
-		},
-		Run: bossShowMinions,
+		Run:  bossShowMinions,
 	}
 	bossCmd.AddCommand(bossMinionShowCmd)
 
@@ -65,7 +64,6 @@ func init() {
 		Name: "run-workload",
 		Help: "Run a workload",
 		Flags: func(f *grumble.Flags) {
-			f.String("b", "boss-url", "", "URL of boss server")
 			f.String("s", "dataspec-file", "", "name of the dataspec file")
 			f.String("r", "db-driver", "", "db driver to use")
 			f.String("d", "db-url", "", "db connection url")
@@ -84,21 +82,14 @@ func init() {
 	bossStopWorkloadCmd := &grumble.Command{
 		Name: "stop-workload",
 		Help: "Stop any running workload",
-		Flags: func(f *grumble.Flags) {
-			f.String("b", "boss-url", "", "URL of boss server")
-		},
-		Run: bossStopWorkload,
+		Run:  bossStopWorkload,
 	}
 	bossCmd.AddCommand(bossStopWorkloadCmd)
 }
 
 func bossPing(c *grumble.Context) error {
-	bossUrl := c.Flags.String("boss-url")
-	if bossUrl == "" {
-		return fmt.Errorf("please provide a valid bossUrl for the boss server")
-	}
-
-	bossClient, err := getBossClient(bossUrl)
+	bossAddr := c.Flags.String("boss")
+	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
 		c.App.Printf("Request failed: (%v)\n", err)
 		return err
@@ -108,76 +99,64 @@ func bossPing(c *grumble.Context) error {
 	_, err = bossClient.Ping(grpcCtx, &proto.BossPingRequest{})
 	grpcCtxCancel()
 	if err != nil {
-		c.App.Printf("%s: Ping failed! (%v)\n", bossUrl, err)
+		c.App.Printf("%s: Ping failed! (%v)\n", bossAddr, err)
 	} else {
 		c.App.Printf("OK\n")
 	}
 	return nil
 }
 
-func bossRegisterMinion(c *grumble.Context) error {
-	bossUrl := c.Flags.String("boss-url")
-	if bossUrl == "" {
-		return fmt.Errorf("please provide a valid bossUrl for the boss server")
-	}
-
-	minionUrl := c.Flags.String("minion-url")
-	if minionUrl == "" {
-		return fmt.Errorf("please provide a valid minionUrl for the minion server")
-	}
-
-	bossClient, err := getBossClient(bossUrl)
-	if err != nil {
-		c.App.Printf("Request failed: (%v)\n", err)
-		return err
-	}
-
-	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.RegisterMinion(grpcCtx, &proto.BossRegisterMinionRequest{Url: minionUrl})
-	grpcCancel()
-	if err != nil {
-		c.App.Printf("Registration failed: (%v)\n", err)
-	} else {
-		c.App.Printf("OK\n")
-	}
-	return nil
-}
-
-func bossUnregisterMinion(c *grumble.Context) error {
-	bossUrl := c.Flags.String("boss-url")
-	if bossUrl == "" {
-		return fmt.Errorf("please provide a valid bossUrl for the boss server")
-	}
-
-	minionUrl := c.Flags.String("minion-url")
-	if minionUrl == "" {
-		return fmt.Errorf("please provide a valid minionUrl for the minion server")
-	}
-
-	bossClient, err := getBossClient(bossUrl)
-	if err != nil {
-		c.App.Printf("Request failed: (%v)\n", err)
-		return err
-	}
-
-	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinonRequest{Url: minionUrl})
-	grpcCancel()
-	if err != nil {
-		c.App.Printf("Unregistration failed: (%v)\n", err)
-	} else {
-		c.App.Printf("OK\n")
-	}
-	return nil
-}
+//func bossRegisterMinion(c *grumble.Context) error {
+//	bossAddr := c.Flags.String("boss")
+//	minionUrl := c.Flags.String("minion-url")
+//	if minionUrl == "" {
+//		return fmt.Errorf("please provide a valid minionUrl for the minion server")
+//	}
+//
+//	bossClient, err := getBossClient(bossAddr)
+//	if err != nil {
+//		c.App.Printf("Request failed: (%v)\n", err)
+//		return err
+//	}
+//
+//	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	_, err = bossClient.RegisterMinion(grpcCtx, &proto.BossRegisterMinionRequest{Url: minionUrl})
+//	grpcCancel()
+//	if err != nil {
+//		c.App.Printf("Registration failed: (%v)\n", err)
+//	} else {
+//		c.App.Printf("OK\n")
+//	}
+//	return nil
+//}
+//
+//func bossUnregisterMinion(c *grumble.Context) error {
+//	bossAddr := c.Flags.String("boss")
+//	minionUrl := c.Flags.String("minion-url")
+//	if minionUrl == "" {
+//		return fmt.Errorf("please provide a valid minionUrl for the minion server")
+//	}
+//
+//	bossClient, err := getBossClient(bossAddr)
+//	if err != nil {
+//		c.App.Printf("Request failed: (%v)\n", err)
+//		return err
+//	}
+//
+//	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinonRequest{Url: minionUrl})
+//	grpcCancel()
+//	if err != nil {
+//		c.App.Printf("Unregistration failed: (%v)\n", err)
+//	} else {
+//		c.App.Printf("OK\n")
+//	}
+//	return nil
+//}
 
 func bossShowMinions(c *grumble.Context) error {
-	bossUrl := c.Flags.String("boss-url")
-	if bossUrl == "" {
-		return fmt.Errorf("please provide a valid bossUrl for the boss server")
-	}
-
-	bossClient, err := getBossClient(bossUrl)
+	bossAddr := c.Flags.String("boss")
+	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
 		c.App.Printf("Request failed: (%v)\n", err)
 		return err
@@ -199,11 +178,7 @@ func bossShowMinions(c *grumble.Context) error {
 }
 
 func bossRunWorkload(c *grumble.Context) error {
-	// Boss URL param
-	bossUrl := c.Flags.String("boss-url")
-	if bossUrl == "" {
-		return fmt.Errorf("please provide a valid bossUrl for the boss server")
-	}
+	bossAddr := c.Flags.String("boss")
 
 	// Dataspec param
 	dataspecFileName := c.Flags.String("dataspec-file")
@@ -280,7 +255,7 @@ func bossRunWorkload(c *grumble.Context) error {
 	c.App.Println("    	concurrency:", concurrency)
 	c.App.Println("    	duration(s):", durationSec)
 
-	bossClient, err := getBossClient(bossUrl)
+	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
 		c.App.Printf("Request failed: (%v)\n", err)
 		return err
@@ -289,11 +264,11 @@ func bossRunWorkload(c *grumble.Context) error {
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	res, err := bossClient.RunWorkload(grpcCtx, &proto.BossRunWorkloadRequest{
 		DataSpec: proto.DataSpecToProto(dataSpec),
-		DbSpec:   &proto.DBSpec{
+		DbSpec: &proto.DBSpec{
 			Driver: dbDriver,
 			Url:    dbUrl,
 		},
-		WlSpec:   &proto.WorkloadSpec{
+		WlSpec: &proto.WorkloadSpec{
 			WorkloadName:  workloadName,
 			AssignedRange: nil,
 			TableName:     table,
@@ -316,12 +291,8 @@ func bossRunWorkload(c *grumble.Context) error {
 }
 
 func bossStopWorkload(c *grumble.Context) error {
-	bossUrl := c.Flags.String("boss-url")
-	if bossUrl == "" {
-		return fmt.Errorf("please provide a valid bossUrl for the boss server")
-	}
-
-	bossClient, err := getBossClient(bossUrl)
+	bossAddr := c.Flags.String("boss")
+	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
 		c.App.Printf("Request failed: (%v)\n", err)
 		return err
@@ -342,12 +313,16 @@ func bossStopWorkload(c *grumble.Context) error {
 	return nil
 }
 
-func getBossClient(bossUrl string) (proto.BossClient, error) {
+func getBossClient(bossAddr string) (proto.BossClient, error) {
+	if _, _, err := net.SplitHostPort(bossAddr); err != nil {
+		bossAddr = net.JoinHostPort(bossAddr, defaultBossPort)
+	}
+
 	connCtx, connCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(connCtx, bossUrl, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.DialContext(connCtx, bossAddr, grpc.WithInsecure(), grpc.WithBlock())
 	connCtxCancel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to %s (%v)", bossUrl, err)
+		return nil, fmt.Errorf("failed to connect to %s (%v)", bossAddr, err)
 	}
 	bossClient := proto.NewBossClient(conn)
 	return bossClient, nil

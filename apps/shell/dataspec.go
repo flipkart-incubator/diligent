@@ -13,7 +13,7 @@ func init() {
 		Help:    "work with dataspecs",
 		Aliases: []string{"ds"},
 	}
-	grumbleShell.AddCommand(dsCmd)
+	grumbleApp.AddCommand(dsCmd)
 
 	dsCreateCmd := &grumble.Command{
 		Name:    "create",

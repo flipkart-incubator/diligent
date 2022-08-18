@@ -1,4 +1,5 @@
 package main
+
 //
 //import (
 //	"context"
@@ -17,7 +18,7 @@ package main
 //		Name:    "db",
 //		Help:    "manage database connections",
 //	}
-//	grumbleShell.AddCommand(dbCmd)
+//	grumbleApp.AddCommand(dbCmd)
 //
 //	dbConnCmd := &grumble.Command{
 //		Name: "conn",

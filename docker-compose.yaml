@@ -48,6 +48,7 @@ services:
       context: .
       dockerfile: Shell.Dockerfile
     image: diligent/shell:latest
+    command: ["/diligent/shell", "--boss", "boss"]
     stdin_open: true
     tty: true
     networks:

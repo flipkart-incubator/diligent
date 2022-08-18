@@ -1,4 +1,5 @@
 package main
+
 //
 //import (
 //	"context"
@@ -16,7 +17,7 @@ package main
 //		Help:    "manage diligent minions",
 //		Aliases: []string{"min"},
 //	}
-//	grumbleShell.AddCommand(minionCmd)
+//	grumbleApp.AddCommand(minionCmd)
 //
 //	minionAddCmd := &grumble.Command{
 //		Name: "add",

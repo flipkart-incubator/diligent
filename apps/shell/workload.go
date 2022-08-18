@@ -1,4 +1,5 @@
 package main
+
 //
 //import (
 //	"context"
@@ -15,7 +16,7 @@ package main
 //		Help:    "run workloads",
 //		Aliases: []string{"wl"},
 //	}
-//	grumbleShell.AddCommand(wlCmd)
+//	grumbleApp.AddCommand(wlCmd)
 //
 //	wlRunCmd := &grumble.Command{
 //		Name: "run",
