@@ -1,24 +1,43 @@
 # Configure targets
-.PHONY: compile clean test start-minion stop-minion start docker
-default: compile
+.PHONY: build-all build-boss build-minion build-shell clean test docker
+default: build-all
 
-BUILD_DIR = ./build
-MINION_APP = ${BUILD_DIR}/minion
-SHELL_APP = ${BUILD_DIR}/shell
+BUILD_DIR:=./build
+BOSS_APP:=$(BUILD_DIR)/boss
+MINION_APP:=$(BUILD_DIR)/minion
+SHELL_APP:=$(BUILD_DIR)/shell
 
-PID_FILE := /tmp/.minion.pid
+GO_VERSION:=$(shell go version)
+COMMIT_HASH:=$(shell git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
+DATE:=$(shell date)
+LDFLAGS:=$(LDFLAGS) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.GoVersion=$(GO_VERSION)\"
+LDFLAGS:=$(LDFLAGS) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.CommitHash=$(COMMIT_HASH)\"
+LDFLAGS:=$(LDFLAGS) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.BuildTime=$(DATE)\"
 
-compile:
-	@echo "Compiling..."
-	@mkdir -p ${BUILD_DIR}
-	@go build -o ${MINION_APP} github.com/flipkart-incubator/diligent/apps/minion
-	@go build -o ${SHELL_APP} github.com/flipkart-incubator/diligent/apps/shell
+build-all: build-boss build-minion build-shell
+
+build-boss:
+	@echo "Building boss..."
+	@mkdir -p $(BUILD_DIR)
+	@go build -o $(BOSS_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/boss
+	@echo "Done"
+
+build-minion:
+	@echo "Building minion..."
+	@mkdir -p $(BUILD_DIR)
+	@go build -o $(MINION_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/minion
+	@echo "Done"
+
+build-shell:
+	@echo "Building shell..."
+	@mkdir -p $(BUILD_DIR)
+	@go build -o $(SHELL_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/shell
 	@echo "Done"
 
 clean:
 	@echo "Cleaning..."
-	@-rm -f ${MINION_APP} ${SHELL_APP}
-	@-rmdir ${BUILD_DIR} 2> /dev/null
+	@-rm -f $(BOSS_APP) $(MINION_APP) $(SHELL_APP)
+	@-rmdir $(BUILD_DIR) 2> /dev/null
 	@echo "Done"
 
 test:
@@ -26,28 +45,13 @@ test:
 	@go test ./...
 	@echo "Done"
 
-start-minion:
-	@${MINION_APP} >/dev/null 2>&1 & echo $$! > $(PID_FILE)
-	@cat $(PID_FILE) | sed "/^/s/^/PID: /"
-
-stop-minion:
-	@-touch $(PID_FILE)
-	@-kill `cat $(PID_FILE)` 2> /dev/null || true
-	@-rm $(PID_FILE)
-
-start-shell:
-	@${SHELL_APP}
-
-start:
-	@bash -c "$(MAKE) clean compile start-minion start-shell stop-minion"
-
-docker-minion:
-    @docker build . -f Minion.Dockerfile -t diligent-minion:latest
-
-docker-boss:
-    @docker build . -f Boss.Dockerfile -t diligent-boss:latest
-
-docker-shell:
-    @docker build . -f Shell.Dockerfile -t diligent-shell:latest
-
-docker: docker-minion docker-shell docker-boss
+# docker-minion:
+#     @docker build . -f Minion.Dockerfile -t diligent-minion:latest
+#
+# docker-boss:
+#     @docker build . -f Boss.Dockerfile -t diligent-boss:latest
+#
+# docker-shell:
+#     @docker build . -f Shell.Dockerfile -t diligent-shell:latest
+#
+# docker: docker-minion docker-shell docker-boss

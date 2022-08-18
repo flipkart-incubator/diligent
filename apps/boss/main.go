@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	log "github.com/sirupsen/logrus"
 	"net"
 )
@@ -18,7 +19,13 @@ func main() {
 	grpcAddr := flag.String("grpc-addr", defaultGrpcAddr, "listening host[:port] for gRPC connections")
 	flag.Parse()
 
-	log.Printf("Starting server process. Arguments: grpc-addr=%s", *grpcAddr)
+	log.Printf("Starting diligent-boss process\n")
+	log.Printf("Build information:")
+	log.Printf("go-version : %s\n", buildinfo.GoVersion)
+	log.Printf("commit-hash: %s\n", buildinfo.CommitHash)
+	log.Printf("build-time : %s\n", buildinfo.BuildTime)
+	log.Printf("Arguments:")
+	log.Printf("grpc-addr  : %s\n", *grpcAddr)
 
 	// If no port is specified for gRPC listener, use default gRPC port
 	if _, _, err := net.SplitHostPort(*grpcAddr); err != nil {

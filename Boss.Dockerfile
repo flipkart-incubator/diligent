@@ -1,14 +1,15 @@
 FROM golang:1.16-alpine as diligent-builder
+RUN apk add --no-cache make
 WORKDIR /diligent
-COPY go.mod go.sum ./
+COPY go.mod go.sum Makefile ./
 RUN go mod download
 COPY apps ./apps
 COPY pkg ./pkg
-RUN CGO_ENABLED=0 GOOS=linux go build -o boss github.com/flipkart-incubator/diligent/apps/boss
+RUN make build-boss
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /diligent
-COPY --from=diligent-builder /diligent/boss ./
+COPY --from=diligent-builder /diligent/build/boss ./
 CMD ["/diligent/boss"]
 

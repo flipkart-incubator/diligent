@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	log "github.com/sirupsen/logrus"
 	"net"
 )
@@ -25,8 +26,16 @@ func main() {
 	bossAddr := flag.String("boss", "", "boss host[:port]")
 	flag.Parse()
 
-	log.Infof("Starting minion process. grpc-addr=%s, metrics-addr=%s, advertise-addr=%s, boss-addr=%s",
-		*grpcAddr, *metricsAddr, *advertiseAddr, *bossAddr)
+	log.Printf("Starting diligent-minion process\n")
+	log.Printf("Build information:")
+	log.Printf("go-version : %s\n", buildinfo.GoVersion)
+	log.Printf("commit-hash: %s\n", buildinfo.CommitHash)
+	log.Printf("build-time : %s\n", buildinfo.BuildTime)
+	log.Printf("Arguments:")
+	log.Printf("grpc-addr  : %s\n", *grpcAddr)
+	log.Printf("metrics-addr  : %s\n", *metricsAddr)
+	log.Printf("advertise-addr  : %s\n", *advertiseAddr)
+	log.Printf("boss  : %s\n", *bossAddr)
 
 	if *bossAddr == "" {
 		log.Fatal("required argument boss not provided")
