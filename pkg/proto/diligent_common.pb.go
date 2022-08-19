@@ -668,6 +668,62 @@ func (x *BuildInfo) GetBuildTime() string {
 	return ""
 }
 
+// General uptime information
+type UpTimeInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	StartTime string `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	Uptime    string `protobuf:"bytes,2,opt,name=uptime,proto3" json:"uptime,omitempty"`
+}
+
+func (x *UpTimeInfo) Reset() {
+	*x = UpTimeInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_diligent_common_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpTimeInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpTimeInfo) ProtoMessage() {}
+
+func (x *UpTimeInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_diligent_common_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpTimeInfo.ProtoReflect.Descriptor instead.
+func (*UpTimeInfo) Descriptor() ([]byte, []int) {
+	return file_diligent_common_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UpTimeInfo) GetStartTime() string {
+	if x != nil {
+		return x.StartTime
+	}
+	return ""
+}
+
+func (x *UpTimeInfo) GetUptime() string {
+	if x != nil {
+		return x.Uptime
+	}
+	return ""
+}
+
 var File_diligent_common_proto protoreflect.FileDescriptor
 
 var file_diligent_common_proto_rawDesc = []byte{
@@ -753,8 +809,12 @@ var file_diligent_common_proto_rawDesc = []byte{
 	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x67, 0x6f,
 	0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1d, 0x0a, 0x0a, 0x62, 0x75, 0x69, 0x6c, 0x64,
 	0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x62, 0x75, 0x69,
-	0x6c, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6c, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x22, 0x43, 0x0a, 0x0a, 0x55, 0x70, 0x54, 0x69, 0x6d, 0x65,
+	0x49, 0x6e, 0x66, 0x6f, 0x12, 0x1d, 0x0a, 0x0a, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x74, 0x69,
+	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x73, 0x74, 0x61, 0x72, 0x74, 0x54,
+	0x69, 0x6d, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x70, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x75, 0x70, 0x74, 0x69, 0x6d, 0x65, 0x42, 0x09, 0x5a, 0x07, 0x2e,
+	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -769,7 +829,7 @@ func file_diligent_common_proto_rawDescGZIP() []byte {
 	return file_diligent_common_proto_rawDescData
 }
 
-var file_diligent_common_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_diligent_common_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_diligent_common_proto_goTypes = []interface{}{
 	(*DataSpec)(nil),      // 0: proto.DataSpec
 	(*DataSpecInfo)(nil),  // 1: proto.DataSpecInfo
@@ -780,6 +840,7 @@ var file_diligent_common_proto_goTypes = []interface{}{
 	(*Range)(nil),         // 6: proto.Range
 	(*GeneralStatus)(nil), // 7: proto.GeneralStatus
 	(*BuildInfo)(nil),     // 8: proto.BuildInfo
+	(*UpTimeInfo)(nil),    // 9: proto.UpTimeInfo
 }
 var file_diligent_common_proto_depIdxs = []int32{
 	2, // 0: proto.DataSpec.key_gen_spec:type_name -> proto.KeyGenSpec
@@ -908,6 +969,18 @@ func file_diligent_common_proto_init() {
 				return nil
 			}
 		}
+		file_diligent_common_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpTimeInfo); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -915,7 +988,7 @@ func file_diligent_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_diligent_common_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

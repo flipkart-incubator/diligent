@@ -55,6 +55,7 @@ type MinionServer struct {
 	metricsAddr   string
 	advertiseAddr string
 	bossAddr      string
+	startTime     time.Time
 
 	mut      *sync.Mutex
 	data     *DataContext
@@ -69,6 +70,7 @@ func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *Min
 		metricsAddr:   metricsAddr,
 		advertiseAddr: advertiseAddr,
 		bossAddr:      bossAddr,
+		startTime:     time.Now(),
 
 		mut:      &sync.Mutex{},
 		data:     nil,
@@ -144,6 +146,10 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 			CommitHash: buildinfo.CommitHash,
 			GoVersion:  buildinfo.GoVersion,
 			BuildTime:  buildinfo.BuildTime,
+		},
+		UptimeInfo: &proto.UpTimeInfo{
+			StartTime: s.startTime.Format(time.UnixDate),
+			Uptime:    time.Since(s.startTime).String(),
 		},
 	}, nil
 }

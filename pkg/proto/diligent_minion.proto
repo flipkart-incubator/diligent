@@ -28,6 +28,7 @@ message MinionPingRequest {
 
 message MinionPingResponse {
   BuildInfo build_info = 1;
+  UpTimeInfo uptime_info = 2;
 }
 
 message MinionLoadDataSpecRequest {

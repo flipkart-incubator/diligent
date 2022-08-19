@@ -74,3 +74,9 @@ message BuildInfo {
   string go_version = 4;
   string build_time = 5;
 }
+
+// General uptime information
+message UpTimeInfo {
+  string start_time = 1;
+  string uptime = 2;
+}
