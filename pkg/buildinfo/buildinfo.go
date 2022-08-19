@@ -1,7 +1,8 @@
 package buildinfo
 
 var (
-	Version    = "unknown"
+	AppName    = "unknown"
+	AppVersion = "unknown"
 	CommitHash = "unknown"
 	GoVersion  = "unknown"
 	BuildTime  = "unknown"

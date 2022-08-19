@@ -68,8 +68,9 @@ message GeneralStatus {
 
 // General build information
 message BuildInfo {
-  string version = 1;
-  string commit_hash = 2;
-  string go_version = 3;
-  string build_time = 4;
+  string app_name = 1;
+  string app_version = 2;
+  string commit_hash = 3;
+  string go_version = 4;
+  string build_time = 5;
 }

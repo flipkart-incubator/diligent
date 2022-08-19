@@ -105,7 +105,8 @@ func bossPing(c *grumble.Context) error {
 		return err
 	} else {
 		c.App.Printf("OK [elapsed=%v]\n", reqDuration)
-		c.App.Printf("Version   : %s\n", res.GetBuildInfo().GetVersion())
+		c.App.Printf("AppName   : %s\n", res.GetBuildInfo().GetAppName())
+		c.App.Printf("AppVersion: %s\n", res.GetBuildInfo().GetAppVersion())
 		c.App.Printf("CommitHash: %s\n", res.GetBuildInfo().GetCommitHash())
 		c.App.Printf("GoVersion : %s\n", res.GetBuildInfo().GetGoVersion())
 		c.App.Printf("BuildTime : %s\n", res.GetBuildInfo().GetBuildTime())
@@ -201,8 +202,8 @@ func bossShowMinions(c *grumble.Context) error {
 
 	c.App.Printf("Build info:\n")
 	for _, bi := range res.GetMinionBuildInfos() {
-		c.App.Printf("%s : version=%s, commit-hash=%s, go-version=%s, build-time=%s\n",
-			bi.GetAddr(), bi.GetBuildInfo().GetVersion(), bi.GetBuildInfo().GetCommitHash(),
+		c.App.Printf("%s : app-name=%s, app-version=%s, commit-hash=%s, go-version=%s, build-time=%s\n",
+			bi.GetAddr(), bi.GetBuildInfo().GetAppName(), bi.GetBuildInfo().GetAppVersion(), bi.GetBuildInfo().GetCommitHash(),
 			bi.GetBuildInfo().GoVersion, bi.GetBuildInfo().GetBuildTime())
 	}
 	return nil

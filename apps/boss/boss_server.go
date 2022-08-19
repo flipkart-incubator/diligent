@@ -73,7 +73,8 @@ func (s *BossServer) Ping(_ context.Context, _ *proto.BossPingRequest) (*proto.B
 
 	return &proto.BossPingResponse{
 		BuildInfo: &proto.BuildInfo{
-			Version:    buildinfo.Version,
+			AppName:    buildinfo.AppName,
+			AppVersion: buildinfo.AppVersion,
 			CommitHash: buildinfo.CommitHash,
 			GoVersion:  buildinfo.GoVersion,
 			BuildTime:  buildinfo.BuildTime,

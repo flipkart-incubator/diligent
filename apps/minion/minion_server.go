@@ -139,7 +139,8 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 
 	return &proto.MinionPingResponse{
 		BuildInfo: &proto.BuildInfo{
-			Version:    buildinfo.Version,
+			AppName:    buildinfo.AppName,
+			AppVersion: buildinfo.AppVersion,
 			CommitHash: buildinfo.CommitHash,
 			GoVersion:  buildinfo.GoVersion,
 			BuildTime:  buildinfo.BuildTime,
