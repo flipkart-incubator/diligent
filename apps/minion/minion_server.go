@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha1"
 	"database/sql"
 	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
@@ -50,14 +51,16 @@ type WorkloadContext struct {
 // It is thread safe
 type MinionServer struct {
 	proto.UnimplementedMinionServer
+	mut *sync.Mutex //mut Is used to coordinate access to this struct
 
 	grpcAddr      string
 	metricsAddr   string
 	advertiseAddr string
 	bossAddr      string
-	startTime     time.Time
 
-	mut      *sync.Mutex
+	pid       string    //pid is a string that represents a unique run of the minion server
+	startTime time.Time //startTime is when this server started executing
+
 	data     *DataContext
 	db       *DBContext
 	workload *WorkloadContext
@@ -65,14 +68,23 @@ type MinionServer struct {
 }
 
 func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *MinionServer {
+	// Generate the pid (unique ID for this run) as a sha1 hash of start timestamp
+	now := time.Now()
+	hasher := sha1.New()
+	hasher.Write([]byte(now.String()))
+	pid := fmt.Sprintf("%X", hasher.Sum(nil)[:8])
+
 	return &MinionServer{
+		mut: &sync.Mutex{},
+
 		grpcAddr:      grpcAddr,
 		metricsAddr:   metricsAddr,
 		advertiseAddr: advertiseAddr,
 		bossAddr:      bossAddr,
-		startTime:     time.Now(),
 
-		mut:      &sync.Mutex{},
+		pid:       pid,
+		startTime: now,
+
 		data:     nil,
 		db:       nil,
 		workload: nil,
@@ -147,7 +159,8 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 			GoVersion:  buildinfo.GoVersion,
 			BuildTime:  buildinfo.BuildTime,
 		},
-		UptimeInfo: &proto.UpTimeInfo{
+		ProcessInfo: &proto.ProcessInfo{
+			Pid:       s.pid,
 			StartTime: s.startTime.Format(time.UnixDate),
 			Uptime:    time.Since(s.startTime).String(),
 		},

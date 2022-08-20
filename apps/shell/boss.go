@@ -110,8 +110,9 @@ func bossPing(c *grumble.Context) error {
 		c.App.Printf("CommitHash: %s\n", res.GetBuildInfo().GetCommitHash())
 		c.App.Printf("GoVersion : %s\n", res.GetBuildInfo().GetGoVersion())
 		c.App.Printf("BuildTime : %s\n", res.GetBuildInfo().GetBuildTime())
-		c.App.Printf("StartTime : %s\n", res.GetUptimeInfo().GetStartTime())
-		c.App.Printf("Uptime    : %s\n", res.GetUptimeInfo().GetUptime())
+		c.App.Printf("Pid       : %s\n", res.GetProcessInfo().GetPid())
+		c.App.Printf("StartTime : %s\n", res.GetProcessInfo().GetStartTime())
+		c.App.Printf("Uptime    : %s\n", res.GetProcessInfo().GetUptime())
 	}
 	return nil
 }
@@ -196,9 +197,10 @@ func bossShowMinions(c *grumble.Context) error {
 	for _, mi := range res.GetMinionInfos() {
 		if mi.GetReachability().GetIsOk() {
 			c.App.Printf("%s : Reachable\n", mi.GetAddr())
-			c.App.Printf("app-name=%s, app-version=%s, commit-hash=%s, go-version=%s, build-time=%s, start-time=%s, uptime=%s\n",
+			c.App.Printf("app-name=%s, app-version=%s, commit-hash=%s, go-version=%s, build-time=%s, pid=%s, start-time=%s, uptime=%s\n",
 				mi.GetBuildInfo().GetAppName(), mi.GetBuildInfo().GetAppVersion(), mi.GetBuildInfo().GetCommitHash(),
-				mi.GetBuildInfo().GoVersion, mi.GetBuildInfo().GetBuildTime(), mi.GetUptimeInfo().GetStartTime(), mi.UptimeInfo.GetUptime())
+				mi.GetBuildInfo().GoVersion, mi.GetBuildInfo().GetBuildTime(), mi.GetProcessInfo().GetPid(),
+				mi.GetProcessInfo().GetStartTime(), mi.GetProcessInfo().GetUptime())
 		} else {
 			c.App.Printf("%s : Not Reachable [reason=%s]\n", mi.GetAddr(), mi.GetReachability().GetFailureReason())
 		}

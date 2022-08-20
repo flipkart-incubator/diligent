@@ -24,7 +24,7 @@ message BossPingRequest {
 
 message BossPingResponse {
   BuildInfo build_info = 1;
-  UpTimeInfo uptime_info = 2;
+  ProcessInfo process_info = 2;
 }
 
 message BossRegisterMinionRequest{
@@ -54,7 +54,7 @@ message MinionInfo {
   string addr = 1;
   GeneralStatus reachability = 2;
   BuildInfo build_info = 3;
-  UpTimeInfo uptime_info = 4;
+  ProcessInfo process_info = 4;
 }
 
 message MinionStatus {

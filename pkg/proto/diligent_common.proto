@@ -75,8 +75,9 @@ message BuildInfo {
   string build_time = 5;
 }
 
-// General uptime information
-message UpTimeInfo {
-  string start_time = 1;
-  string uptime = 2;
+// General process information
+message ProcessInfo {
+  string pid = 1;
+  string start_time = 2;
+  string uptime = 3;
 }

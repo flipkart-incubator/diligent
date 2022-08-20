@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
@@ -25,19 +26,29 @@ const (
 // It is thread safe
 type BossServer struct {
 	proto.UnimplementedBossServer
+	mut *sync.Mutex
 
 	listenAddr string
-	startTime  time.Time
 
-	mut         *sync.Mutex
+	pid       string
+	startTime time.Time
+
 	minionPools map[string]*grpcpool.Pool
 }
 
 func NewBossServer(listenAddr string) *BossServer {
+	// Generate the pid (unique ID for this run) as a sha1 hash of start timestamp
+	now := time.Now()
+	hasher := sha1.New()
+	hasher.Write([]byte(now.String()))
+	pid := fmt.Sprintf("%X", hasher.Sum(nil)[:8])
+
 	return &BossServer{
+		mut: &sync.Mutex{},
+
 		listenAddr:  listenAddr,
+		pid:         pid,
 		startTime:   time.Now(),
-		mut:         &sync.Mutex{},
 		minionPools: make(map[string]*grpcpool.Pool),
 	}
 }
@@ -82,7 +93,8 @@ func (s *BossServer) Ping(_ context.Context, _ *proto.BossPingRequest) (*proto.B
 			GoVersion:  buildinfo.GoVersion,
 			BuildTime:  buildinfo.BuildTime,
 		},
-		UptimeInfo: &proto.UpTimeInfo{
+		ProcessInfo: &proto.ProcessInfo{
+			Pid:       s.pid,
 			StartTime: s.startTime.Format(time.UnixDate),
 			Uptime:    time.Since(s.startTime).String(),
 		},
@@ -358,8 +370,8 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, ch 
 			IsOk:          true,
 			FailureReason: "",
 		},
-		BuildInfo:  res.GetBuildInfo(),
-		UptimeInfo: res.GetUptimeInfo(),
+		BuildInfo:   res.GetBuildInfo(),
+		ProcessInfo: res.GetProcessInfo(),
 	}
 }
 
