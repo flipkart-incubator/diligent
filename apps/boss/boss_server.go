@@ -22,6 +22,25 @@ const (
 	minionRequestTimeout      = 5
 )
 
+//type JobState int
+//const (
+//	Prepared JobState = iota
+//	Running
+//	EndedSuccess
+//	EndedFailure
+//	EndedStopped
+//	EndedNeverRan
+//)
+//
+//type JobInfo struct {
+//	jobId       string
+//	jobSpec     *proto.JobSpec
+//	jobState    JobState
+//	prepareTime time.Time
+//	runTime     time.Time
+//	endTime     time.Time
+//}
+
 // BossServer represents a diligent boss gRPC server and associated state
 // It is thread safe
 type BossServer struct {
@@ -29,6 +48,9 @@ type BossServer struct {
 	mut *sync.Mutex
 
 	listenAddr string
+
+	//currentJobInfo *JobInfo
+	//pastJobInfos   []*JobInfo
 
 	pid        string
 	startTime  time.Time
@@ -44,7 +66,7 @@ func NewBossServer(listenAddr string) *BossServer {
 		listenAddr:  listenAddr,
 		pid:         idgen.GenerateId16(),
 		startTime:   time.Now(),
-		nextJobNum:  0,
+		nextJobNum:  1,
 		minionPools: make(map[string]*grpcpool.Pool),
 	}
 }
@@ -202,6 +224,26 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
+	// Reject if we are running a job currently
+	//if s.currentJobInfo != nil && s.currentJobInfo.jobState == Running {
+	//	log.Infof("PrepareJob(): Cannot prepare. Job %s is running", s.currentJobInfo.jobId)
+	//	return &proto.BossPrepareJobResponse{
+	//		Status: &proto.GeneralStatus{
+	//			IsOk:          false,
+	//			FailureReason: "current job is running: " + s.currentJobInfo.jobId,
+	//		},
+	//	}, nil
+	//}
+
+	// Clean up earlier state if we were already in prepared state
+	//if s.currentJobInfo != nil && s.currentJobInfo.jobState == Prepared {
+	//	log.Infof("PrepareJob(): Boss was prepared for job %s. Cleaning up previous state", s.currentJobInfo.jobId)
+	//	s.currentJobInfo.jobState = EndedNeverRan
+	//	s.currentJobInfo.endTime = time.Now()
+	//	s.pastJobInfos = append(s.pastJobInfos, s.currentJobInfo)
+	//	s.currentJobInfo = nil
+	//}
+
 	// Generate the ID for this job
 	jobId := s.getNextJobId()
 	log.Infof("PrepareJob(): Assigning JobId=%s", jobId)
@@ -224,7 +266,7 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 		reason := fmt.Sprintf("invalid workload '%s'", workloadName)
 		log.Infof("RunWorkload(): %s", reason)
 		return &proto.BossPrepareJobResponse{
-			OverallStatus: &proto.GeneralStatus{
+			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: reason,
 			},
@@ -269,10 +311,17 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 		}
 	}
 
+	// Preparation was successful
+	//s.currentJobInfo = &JobInfo{
+	//	jobId:       jobId,
+	//	jobSpec:     in.GetJobSpec(),
+	//	jobState:    Prepared,
+	//	prepareTime: time.Now(),
+	//}
 	log.Infof("PrepareJob(): completed")
 	return &proto.BossPrepareJobResponse{
+		Status:         &overallStatus,
 		JobId:          jobId,
-		OverallStatus:  &overallStatus,
 		MinionStatuses: minionStatuses,
 	}, nil
 }
@@ -281,6 +330,16 @@ func (s *BossServer) RunJob(ctx context.Context, in *proto.BossRunJobRequest) (*
 	log.Infof("GRPC: RunJob()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
+
+	// Process only if we are in prepared state
+	//if s.currentJobInfo == nil || s.currentJobInfo.jobState != Prepared {
+	//	return &proto.BossRunJobResponse{
+	//		Status: &proto.GeneralStatus{
+	//			IsOk:          false,
+	//			FailureReason: "no current job in prepared state",
+	//		},
+	//	}, nil
+	//}
 
 	// Run on individual minions
 	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
@@ -308,9 +367,11 @@ func (s *BossServer) RunJob(ctx context.Context, in *proto.BossRunJobRequest) (*
 		}
 	}
 
+	//s.currentJobInfo.jobState = Running
+	//s.currentJobInfo.runTime = time.Now()
 	log.Infof("RunJob(): completed")
 	return &proto.BossRunJobResponse{
-		OverallStatus:  &overallStatus,
+		Status:         &overallStatus,
 		MinionStatuses: minionStatuses,
 	}, nil
 }
@@ -319,6 +380,16 @@ func (s *BossServer) StopJob(ctx context.Context, in *proto.BossStopJobRequest) 
 	log.Infof("GRPC: StopJob()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
+
+	// Process only if minion is running a job and id matches
+	//if s.currentJobInfo == nil || s.currentJobInfo.jobState != Running {
+	//	return &proto.BossStopJobResponse{
+	//		Status: &proto.GeneralStatus{
+	//			IsOk:          false,
+	//			FailureReason: "no current job in running state",
+	//		},
+	//	}, nil
+	//}
 
 	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
 	ch := make(chan *proto.MinionStatus)
@@ -345,9 +416,11 @@ func (s *BossServer) StopJob(ctx context.Context, in *proto.BossStopJobRequest) 
 		}
 	}
 
+	//s.currentJobInfo.jobState = EndedStopped
+	//s.currentJobInfo.endTime = time.Now()
 	log.Infof("StopJob(): completed")
 	return &proto.BossStopJobResponse{
-		OverallStatus:  &overallStatus,
+		Status:         &overallStatus,
 		MinionStatuses: minionStatuses,
 	}, nil
 }
@@ -414,6 +487,7 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, ch 
 		},
 		BuildInfo:   res.GetBuildInfo(),
 		ProcessInfo: res.GetProcessInfo(),
+		JobInfo:     res.GetJobInfo(),
 	}
 }
 
@@ -583,7 +657,7 @@ func (s *BossServer) stopJobOnMinion(ctx context.Context, addr string, ch chan *
 }
 
 func (s *BossServer) getNextJobId() string {
-	id := fmt.Sprintf("%s-%04d", s.pid, s.nextJobNum)
+	id := fmt.Sprintf("%d", s.nextJobNum)
 	s.nextJobNum++
 	return id
 }

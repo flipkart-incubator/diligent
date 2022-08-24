@@ -57,7 +57,12 @@ func init() {
 	bossMinionShowCmd := &grumble.Command{
 		Name: "show-minions",
 		Help: "show minions registered with the boss",
-		Run:  bossShowMinions,
+		Flags: func(f *grumble.Flags) {
+			f.Bool("b", "build-info", false, "show build information")
+			f.Bool("p", "process-info", false, "show process information")
+			f.Bool("j", "job-info", false, "show job information")
+		},
+		Run: bossShowMinions,
 	}
 	bossCmd.AddCommand(bossMinionShowCmd)
 
@@ -70,7 +75,7 @@ func init() {
 			f.String("d", "db-url", "", "db connection url")
 			f.Int("t", "duration", 0, "duration after which workload is terminated (seconds). zero for no timout (default)")
 			f.Int("c", "concurrency", 1, "number of concurrent workers")
-			f.Int("k", "batch-size", 10, "number of statements in a transaction (for transaction based workloads)")
+			f.Int("k", "batch-size", 1, "number of statements in a transaction (for transaction based workloads)")
 			f.String("m", "description", "", "a description of the job")
 		},
 		Args: func(a *grumble.Args) {
@@ -204,17 +209,79 @@ func bossShowMinions(c *grumble.Context) error {
 
 	for _, mi := range res.GetMinionInfos() {
 		if mi.GetReachability().GetIsOk() {
-			c.App.Printf("%s : Reachable\n", mi.GetAddr())
-			c.App.Printf("app-name=%s, app-version=%s, commit-hash=%s, go-version=%s, build-time=%s, pid=%s, start-time=%s, uptime=%s\n",
-				mi.GetBuildInfo().GetAppName(), mi.GetBuildInfo().GetAppVersion(), mi.GetBuildInfo().GetCommitHash(),
-				mi.GetBuildInfo().GoVersion, mi.GetBuildInfo().GetBuildTime(), mi.GetProcessInfo().GetPid(),
-				mi.GetProcessInfo().GetStartTime(), mi.GetProcessInfo().GetUptime())
+			c.App.Printf("%s : OK ", mi.GetAddr())
 		} else {
-			c.App.Printf("%s : Not Reachable [reason=%s]\n", mi.GetAddr(), mi.GetReachability().GetFailureReason())
+			c.App.Printf("%s : Not Reachable [%s]\n", mi.GetAddr(), mi.GetReachability().GetFailureReason())
+			continue
+		}
+		switch {
+		case c.Flags.Bool("build-info"):
+			showMinionBuildInfo(c, mi)
+		case c.Flags.Bool("process-info"):
+			showMinionProcessInfo(c, mi)
+		case c.Flags.Bool("job-info"):
+			showMinionJobInfo(c, mi)
+		default:
+			showMinionSummaryInfo(c, mi)
 		}
 	}
 
 	return nil
+}
+
+func showMinionBuildInfo(c *grumble.Context, mi *proto.MinionInfo) {
+	c.App.Printf("\n")
+	c.App.Printf("\tapp-name: %s\n", mi.GetBuildInfo().GetAppName())
+	c.App.Printf("\tapp-version: %s\n", mi.GetBuildInfo().GetAppVersion())
+	c.App.Printf("\tcommit-hash: %s\n", mi.GetBuildInfo().GetCommitHash())
+	c.App.Printf("\tgo-version: %s\n", mi.GetBuildInfo().GetGoVersion())
+	c.App.Printf("\tbuild-time: %s\n", mi.GetBuildInfo().GetBuildTime())
+}
+
+func showMinionProcessInfo(c *grumble.Context, mi *proto.MinionInfo) {
+	c.App.Printf("\n")
+	c.App.Printf("\tpid: %s\n", mi.GetProcessInfo().GetPid())
+	c.App.Printf("\tstart-time: %s\n", mi.GetProcessInfo().GetStartTime())
+	c.App.Printf("\tup-time: %s\n", mi.GetProcessInfo().GetUptime())
+}
+
+func showMinionJobInfo(c *grumble.Context, mi *proto.MinionInfo) {
+	if mi.GetJobInfo() == nil {
+		c.App.Printf("[No job info]\n")
+		return
+	}
+	ds := proto.DataSpecFromProto(mi.GetJobInfo().GetJobSpec().GetDataSpec())
+	c.App.Printf("\n")
+	c.App.Printf("\tjob-id:    %s\n", mi.GetJobInfo().GetJobId())
+	c.App.Printf("\tjob-state: %s\n", mi.GetJobInfo().GetJobState())
+	c.App.Printf("\tprepare-time: %s\n", mi.GetJobInfo().GetPrepareTime())
+	c.App.Printf("\trun-time:     %s\n", mi.GetJobInfo().GetRunTime())
+	c.App.Printf("\tend-time:     %s\n", mi.GetJobInfo().GetEndTime())
+	c.App.Printf("\tdata-spec:\n")
+	c.App.Printf("\t\tdata-num-recs: %d\n", ds.KeyGenSpec.NumKeys())
+	c.App.Printf("\t\tdata-rec-size: %d\n", mi.GetJobInfo().GetJobSpec().GetDataSpec().GetRecordSize())
+	c.App.Printf("\tdb-spec:\n")
+	c.App.Printf("\t\tdb-driver: %s\n", mi.GetJobInfo().GetJobSpec().GetDbSpec().GetDriver())
+	c.App.Printf("\t\tdb-url:    %s\n", mi.GetJobInfo().GetJobSpec().GetDbSpec().GetUrl())
+	c.App.Printf("\tworkload-spec:\n")
+	c.App.Printf("\t\tworkload-name:           %s\n", mi.GetJobInfo().GetJobSpec().GetWorkloadSpec().GetWorkloadName())
+	c.App.Printf("\t\ttable-name:              %s\n", mi.GetJobInfo().GetJobSpec().GetWorkloadSpec().GetTableName())
+	c.App.Printf("\t\tworkload-assigned-range: %s\n", mi.GetJobInfo().GetJobSpec().GetWorkloadSpec().GetAssignedRange())
+	c.App.Printf("\t\tworkload-batch-size:     %d\n", mi.GetJobInfo().GetJobSpec().GetWorkloadSpec().GetBatchSize())
+	c.App.Printf("\t\tworkload-concurrency:    %d\n", mi.GetJobInfo().GetJobSpec().GetWorkloadSpec().GetConcurrency())
+	c.App.Printf("\t\tworkload-duration-sec:   %d\n", mi.GetJobInfo().GetJobSpec().GetWorkloadSpec().GetDurationSec())
+}
+
+func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
+	jobId := "none"
+	jobState := "none"
+	if mi.GetJobInfo() != nil {
+		jobId = mi.GetJobInfo().GetJobId()
+		jobState = mi.GetJobInfo().GetJobState().String()
+	}
+	c.App.Printf("[version=%s, pid=%s, uptime=%s, jobId=%s, jobState=%s]\n",
+		mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
+		mi.GetProcessInfo().GetUptime(), jobId, jobState)
 }
 
 func bossPrepareJob(c *grumble.Context) error {
@@ -330,7 +397,7 @@ func bossPrepareJob(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		return err
 	}
-	if res.GetOverallStatus().GetIsOk() != true {
+	if res.GetStatus().GetIsOk() != true {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		for _, ms := range res.GetMinionStatuses() {
 			if ms.GetStatus().GetIsOk() {
@@ -339,7 +406,7 @@ func bossPrepareJob(c *grumble.Context) error {
 				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 			}
 		}
-		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
+		return fmt.Errorf(res.GetStatus().GetFailureReason())
 	}
 	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	c.App.Printf("JobId=%s\n", res.GetJobId())
@@ -362,7 +429,7 @@ func bossRunJob(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		return err
 	}
-	if res.GetOverallStatus().GetIsOk() != true {
+	if res.GetStatus().GetIsOk() != true {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		for _, ms := range res.GetMinionStatuses() {
 			if ms.GetStatus().GetIsOk() {
@@ -371,7 +438,7 @@ func bossRunJob(c *grumble.Context) error {
 				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 			}
 		}
-		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
+		return fmt.Errorf(res.GetStatus().GetFailureReason())
 	}
 	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	return nil
@@ -393,7 +460,7 @@ func bossStopJob(c *grumble.Context) error {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		return err
 	}
-	if res.GetOverallStatus().GetIsOk() != true {
+	if res.GetStatus().GetIsOk() != true {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		for _, ms := range res.GetMinionStatuses() {
 			if ms.GetStatus().GetIsOk() {
@@ -402,7 +469,7 @@ func bossStopJob(c *grumble.Context) error {
 				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
 			}
 		}
-		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
+		return fmt.Errorf(res.GetStatus().GetFailureReason())
 	}
 	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
 	return nil

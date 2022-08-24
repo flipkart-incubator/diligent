@@ -56,6 +56,7 @@ message MinionInfo {
   GeneralStatus reachability = 2;
   BuildInfo build_info = 3;
   ProcessInfo process_info = 4;
+  JobInfo job_info = 5;
 }
 
 message MinionStatus {
@@ -69,8 +70,8 @@ message BossPrepareJobRequest {
 }
 
 message BossPrepareJobResponse {
+  GeneralStatus status = 2;
   string job_id = 1;
-  GeneralStatus overall_status = 2;
   repeated MinionStatus minion_statuses = 3;
 }
 
@@ -78,7 +79,7 @@ message BossRunJobRequest {
 }
 
 message BossRunJobResponse {
-  GeneralStatus overall_status = 1;
+  GeneralStatus status = 1;
   repeated MinionStatus minion_statuses = 2;
 }
 
@@ -86,6 +87,6 @@ message BossStopJobRequest {
 }
 
 message BossStopJobResponse {
-    GeneralStatus overall_status = 1;
+    GeneralStatus status = 1;
     repeated MinionStatus minion_statuses = 2;
 }

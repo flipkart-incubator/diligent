@@ -13,11 +13,6 @@ service Minion {
   rpc PrepareJob (MinionPrepareJobRequest) returns (MinionPrepareJobResponse);
   rpc RunJob (MinionRunJobRequest) returns (MinionRunJobResponse);
   rpc StopJob (MinionStopJobRequest) returns (MinionStopJobResponse);
-
-  // Info Related
-  rpc GetDataSpecInfo (MinionGetDataSpecInfoRequest) returns (MinionGetDataSpecInfoResponse);
-  rpc GetDBConnectionInfo (MinionGetDBConnectionInfoRequest) returns (MinionGetDBConnectionInfoResponse);
-  rpc GetWorkloadInfo (MinionGetWorkloadInfoRequest) returns (MinionGetWorkloadInfoResponse);
 }
 
 message MinionPingRequest {
@@ -26,6 +21,7 @@ message MinionPingRequest {
 message MinionPingResponse {
   BuildInfo build_info = 1;
   ProcessInfo process_info = 2;
+  JobInfo job_info = 3;
 }
 
 message MinionPrepareJobRequest {
@@ -52,27 +48,3 @@ message MinionStopJobResponse {
   GeneralStatus status = 1;
 }
 
-message MinionGetDataSpecInfoRequest {
-}
-
-message MinionGetDataSpecInfoResponse {
-  GeneralStatus status = 1;
-  DataSpecInfo data_spec_info = 2;
-}
-
-message MinionGetDBConnectionInfoRequest {
-}
-
-message MinionGetDBConnectionInfoResponse {
-  GeneralStatus status = 1;
-  DBSpec db_spec = 2;
-}
-
-message MinionGetWorkloadInfoRequest {
-}
-
-message MinionGetWorkloadInfoResponse {
-  GeneralStatus status = 1;
-  WorkloadSpec workload_spec = 2;
-  bool is_running = 3;
-}

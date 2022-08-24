@@ -87,3 +87,23 @@ message ProcessInfo {
   string start_time = 2;
   string uptime = 3;
 }
+
+enum JobState {
+    UNDEFINED = 0;
+    PREPARED = 1;
+    RUNNING = 2;
+    ENDED_SUCCESS = 3;
+    ENDED_FAILURE = 4;
+    ENDED_STOPPED = 5;
+    ENDED_NEVER_RAN = 6;
+}
+
+// Job information
+message JobInfo {
+  string job_id = 2;
+  JobSpec job_spec = 3;
+  JobState job_state = 4;
+  string prepare_time = 5;
+  string run_time = 6;
+  string end_time = 7;
+}

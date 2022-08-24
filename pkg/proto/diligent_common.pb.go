@@ -20,6 +20,67 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type JobState int32
+
+const (
+	JobState_UNDEFINED       JobState = 0
+	JobState_PREPARED        JobState = 1
+	JobState_RUNNING         JobState = 2
+	JobState_ENDED_SUCCESS   JobState = 3
+	JobState_ENDED_FAILURE   JobState = 4
+	JobState_ENDED_STOPPED   JobState = 5
+	JobState_ENDED_NEVER_RAN JobState = 6
+)
+
+// Enum value maps for JobState.
+var (
+	JobState_name = map[int32]string{
+		0: "UNDEFINED",
+		1: "PREPARED",
+		2: "RUNNING",
+		3: "ENDED_SUCCESS",
+		4: "ENDED_FAILURE",
+		5: "ENDED_STOPPED",
+		6: "ENDED_NEVER_RAN",
+	}
+	JobState_value = map[string]int32{
+		"UNDEFINED":       0,
+		"PREPARED":        1,
+		"RUNNING":         2,
+		"ENDED_SUCCESS":   3,
+		"ENDED_FAILURE":   4,
+		"ENDED_STOPPED":   5,
+		"ENDED_NEVER_RAN": 6,
+	}
+)
+
+func (x JobState) Enum() *JobState {
+	p := new(JobState)
+	*p = x
+	return p
+}
+
+func (x JobState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (JobState) Descriptor() protoreflect.EnumDescriptor {
+	return file_diligent_common_proto_enumTypes[0].Descriptor()
+}
+
+func (JobState) Type() protoreflect.EnumType {
+	return &file_diligent_common_proto_enumTypes[0]
+}
+
+func (x JobState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use JobState.Descriptor instead.
+func (JobState) EnumDescriptor() ([]byte, []int) {
+	return file_diligent_common_proto_rawDescGZIP(), []int{0}
+}
+
 type JobSpec struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -795,6 +856,94 @@ func (x *ProcessInfo) GetUptime() string {
 	return ""
 }
 
+// Job information
+type JobInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	JobId       string   `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	JobSpec     *JobSpec `protobuf:"bytes,3,opt,name=job_spec,json=jobSpec,proto3" json:"job_spec,omitempty"`
+	JobState    JobState `protobuf:"varint,4,opt,name=job_state,json=jobState,proto3,enum=proto.JobState" json:"job_state,omitempty"`
+	PrepareTime string   `protobuf:"bytes,5,opt,name=prepare_time,json=prepareTime,proto3" json:"prepare_time,omitempty"`
+	RunTime     string   `protobuf:"bytes,6,opt,name=run_time,json=runTime,proto3" json:"run_time,omitempty"`
+	EndTime     string   `protobuf:"bytes,7,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+}
+
+func (x *JobInfo) Reset() {
+	*x = JobInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_diligent_common_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *JobInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JobInfo) ProtoMessage() {}
+
+func (x *JobInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_diligent_common_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JobInfo.ProtoReflect.Descriptor instead.
+func (*JobInfo) Descriptor() ([]byte, []int) {
+	return file_diligent_common_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *JobInfo) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *JobInfo) GetJobSpec() *JobSpec {
+	if x != nil {
+		return x.JobSpec
+	}
+	return nil
+}
+
+func (x *JobInfo) GetJobState() JobState {
+	if x != nil {
+		return x.JobState
+	}
+	return JobState_UNDEFINED
+}
+
+func (x *JobInfo) GetPrepareTime() string {
+	if x != nil {
+		return x.PrepareTime
+	}
+	return ""
+}
+
+func (x *JobInfo) GetRunTime() string {
+	if x != nil {
+		return x.RunTime
+	}
+	return ""
+}
+
+func (x *JobInfo) GetEndTime() string {
+	if x != nil {
+		return x.EndTime
+	}
+	return ""
+}
+
 var File_diligent_common_proto protoreflect.FileDescriptor
 
 var file_diligent_common_proto_rawDesc = []byte{
@@ -895,8 +1044,30 @@ var file_diligent_common_proto_rawDesc = []byte{
 	0x70, 0x69, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x74, 0x69, 0x6d,
 	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x73, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69,
 	0x6d, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x70, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x06, 0x75, 0x70, 0x74, 0x69, 0x6d, 0x65, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x2f,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x28, 0x09, 0x52, 0x06, 0x75, 0x70, 0x74, 0x69, 0x6d, 0x65, 0x22, 0xd2, 0x01, 0x0a, 0x07, 0x4a,
+	0x6f, 0x62, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x15, 0x0a, 0x06, 0x6a, 0x6f, 0x62, 0x5f, 0x69, 0x64,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6a, 0x6f, 0x62, 0x49, 0x64, 0x12, 0x29, 0x0a,
+	0x08, 0x6a, 0x6f, 0x62, 0x5f, 0x73, 0x70, 0x65, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x0e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4a, 0x6f, 0x62, 0x53, 0x70, 0x65, 0x63, 0x52,
+	0x07, 0x6a, 0x6f, 0x62, 0x53, 0x70, 0x65, 0x63, 0x12, 0x2c, 0x0a, 0x09, 0x6a, 0x6f, 0x62, 0x5f,
+	0x73, 0x74, 0x61, 0x74, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0f, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2e, 0x4a, 0x6f, 0x62, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x08, 0x6a, 0x6f,
+	0x62, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x21, 0x0a, 0x0c, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72,
+	0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x70, 0x72,
+	0x65, 0x70, 0x61, 0x72, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x75, 0x6e,
+	0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x75, 0x6e,
+	0x54, 0x69, 0x6d, 0x65, 0x12, 0x19, 0x0a, 0x08, 0x65, 0x6e, 0x64, 0x5f, 0x74, 0x69, 0x6d, 0x65,
+	0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x65, 0x6e, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x2a,
+	0x82, 0x01, 0x0a, 0x08, 0x4a, 0x6f, 0x62, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x0d, 0x0a, 0x09,
+	0x55, 0x4e, 0x44, 0x45, 0x46, 0x49, 0x4e, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x50,
+	0x52, 0x45, 0x50, 0x41, 0x52, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x52, 0x55, 0x4e,
+	0x4e, 0x49, 0x4e, 0x47, 0x10, 0x02, 0x12, 0x11, 0x0a, 0x0d, 0x45, 0x4e, 0x44, 0x45, 0x44, 0x5f,
+	0x53, 0x55, 0x43, 0x43, 0x45, 0x53, 0x53, 0x10, 0x03, 0x12, 0x11, 0x0a, 0x0d, 0x45, 0x4e, 0x44,
+	0x45, 0x44, 0x5f, 0x46, 0x41, 0x49, 0x4c, 0x55, 0x52, 0x45, 0x10, 0x04, 0x12, 0x11, 0x0a, 0x0d,
+	0x45, 0x4e, 0x44, 0x45, 0x44, 0x5f, 0x53, 0x54, 0x4f, 0x50, 0x50, 0x45, 0x44, 0x10, 0x05, 0x12,
+	0x13, 0x0a, 0x0f, 0x45, 0x4e, 0x44, 0x45, 0x44, 0x5f, 0x4e, 0x45, 0x56, 0x45, 0x52, 0x5f, 0x52,
+	0x41, 0x4e, 0x10, 0x06, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -911,34 +1082,39 @@ func file_diligent_common_proto_rawDescGZIP() []byte {
 	return file_diligent_common_proto_rawDescData
 }
 
-var file_diligent_common_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_diligent_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_diligent_common_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_diligent_common_proto_goTypes = []interface{}{
-	(*JobSpec)(nil),       // 0: proto.JobSpec
-	(*DataSpec)(nil),      // 1: proto.DataSpec
-	(*DataSpecInfo)(nil),  // 2: proto.DataSpecInfo
-	(*KeyGenSpec)(nil),    // 3: proto.KeyGenSpec
-	(*TrSpec)(nil),        // 4: proto.TrSpec
-	(*DBSpec)(nil),        // 5: proto.DBSpec
-	(*WorkloadSpec)(nil),  // 6: proto.WorkloadSpec
-	(*Range)(nil),         // 7: proto.Range
-	(*GeneralStatus)(nil), // 8: proto.GeneralStatus
-	(*BuildInfo)(nil),     // 9: proto.BuildInfo
-	(*ProcessInfo)(nil),   // 10: proto.ProcessInfo
+	(JobState)(0),         // 0: proto.JobState
+	(*JobSpec)(nil),       // 1: proto.JobSpec
+	(*DataSpec)(nil),      // 2: proto.DataSpec
+	(*DataSpecInfo)(nil),  // 3: proto.DataSpecInfo
+	(*KeyGenSpec)(nil),    // 4: proto.KeyGenSpec
+	(*TrSpec)(nil),        // 5: proto.TrSpec
+	(*DBSpec)(nil),        // 6: proto.DBSpec
+	(*WorkloadSpec)(nil),  // 7: proto.WorkloadSpec
+	(*Range)(nil),         // 8: proto.Range
+	(*GeneralStatus)(nil), // 9: proto.GeneralStatus
+	(*BuildInfo)(nil),     // 10: proto.BuildInfo
+	(*ProcessInfo)(nil),   // 11: proto.ProcessInfo
+	(*JobInfo)(nil),       // 12: proto.JobInfo
 }
 var file_diligent_common_proto_depIdxs = []int32{
-	1, // 0: proto.JobSpec.data_spec:type_name -> proto.DataSpec
-	5, // 1: proto.JobSpec.db_spec:type_name -> proto.DBSpec
-	6, // 2: proto.JobSpec.workload_spec:type_name -> proto.WorkloadSpec
-	3, // 3: proto.DataSpec.key_gen_spec:type_name -> proto.KeyGenSpec
-	4, // 4: proto.DataSpec.uniq_tr_spec:type_name -> proto.TrSpec
-	4, // 5: proto.DataSpec.small_grp_tr_spec:type_name -> proto.TrSpec
-	4, // 6: proto.DataSpec.large_grp_tr_spec:type_name -> proto.TrSpec
-	7, // 7: proto.WorkloadSpec.assigned_range:type_name -> proto.Range
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	2,  // 0: proto.JobSpec.data_spec:type_name -> proto.DataSpec
+	6,  // 1: proto.JobSpec.db_spec:type_name -> proto.DBSpec
+	7,  // 2: proto.JobSpec.workload_spec:type_name -> proto.WorkloadSpec
+	4,  // 3: proto.DataSpec.key_gen_spec:type_name -> proto.KeyGenSpec
+	5,  // 4: proto.DataSpec.uniq_tr_spec:type_name -> proto.TrSpec
+	5,  // 5: proto.DataSpec.small_grp_tr_spec:type_name -> proto.TrSpec
+	5,  // 6: proto.DataSpec.large_grp_tr_spec:type_name -> proto.TrSpec
+	8,  // 7: proto.WorkloadSpec.assigned_range:type_name -> proto.Range
+	1,  // 8: proto.JobInfo.job_spec:type_name -> proto.JobSpec
+	0,  // 9: proto.JobInfo.job_state:type_name -> proto.JobState
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_diligent_common_proto_init() }
@@ -1079,19 +1255,32 @@ func file_diligent_common_proto_init() {
 				return nil
 			}
 		}
+		file_diligent_common_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*JobInfo); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_diligent_common_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   11,
+			NumEnums:      1,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_diligent_common_proto_goTypes,
 		DependencyIndexes: file_diligent_common_proto_depIdxs,
+		EnumInfos:         file_diligent_common_proto_enumTypes,
 		MessageInfos:      file_diligent_common_proto_msgTypes,
 	}.Build()
 	File_diligent_common_proto = out.File
