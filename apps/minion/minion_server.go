@@ -34,9 +34,8 @@ const (
 )
 
 type DataContext struct {
-	dataSpecName string
-	dataSpec     *datagen.Spec
-	dataGen      *datagen.DataGen
+	dataSpec *datagen.Spec
+	dataGen  *datagen.DataGen
 }
 
 type DBContext struct {
@@ -207,7 +206,7 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 	}
 
 	// Load the dataspec
-	err := s.loadDataSpec(ctx, "TODO", in.GetJobSpec().GetDataSpec())
+	err := s.loadDataSpec(ctx, in.GetJobSpec().GetDataSpec())
 	if err != nil {
 		log.Errorf("GRPC: PrepareJob(jobId=%s) Failed: %s", in.GetJobId(), err.Error())
 		return &proto.MinionPrepareJobResponse{
@@ -292,13 +291,12 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 	}, nil
 }
 
-func (s *MinionServer) loadDataSpec(ctx context.Context, name string, protoDs *proto.DataSpec) error {
+func (s *MinionServer) loadDataSpec(ctx context.Context, protoDs *proto.DataSpec) error {
 	log.Infof("Loading dataspec...")
 	dataSpec := proto.DataSpecFromProto(protoDs)
 	s.data = &DataContext{
-		dataSpecName: name,
-		dataSpec:     dataSpec,
-		dataGen:      datagen.NewDataGen(dataSpec),
+		dataSpec: dataSpec,
+		dataGen:  datagen.NewDataGen(dataSpec),
 	}
 	log.Infof("Data spec loaded successfully")
 	return nil
