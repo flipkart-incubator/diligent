@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/sha1"
 	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
+	"github.com/flipkart-incubator/diligent/pkg/idgen"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
 	"github.com/processout/grpc-go-pool"
@@ -30,25 +30,21 @@ type BossServer struct {
 
 	listenAddr string
 
-	pid       string
-	startTime time.Time
+	pid        string
+	startTime  time.Time
+	nextJobNum int
 
 	minionPools map[string]*grpcpool.Pool
 }
 
 func NewBossServer(listenAddr string) *BossServer {
-	// Generate the pid (unique ID for this run) as a sha1 hash of start timestamp
-	now := time.Now()
-	hasher := sha1.New()
-	hasher.Write([]byte(now.String()))
-	pid := fmt.Sprintf("%X", hasher.Sum(nil)[:8])
-
 	return &BossServer{
 		mut: &sync.Mutex{},
 
 		listenAddr:  listenAddr,
-		pid:         pid,
+		pid:         idgen.GenerateId16(),
 		startTime:   time.Now(),
+		nextJobNum:  0,
 		minionPools: make(map[string]*grpcpool.Pool),
 	}
 }
@@ -201,17 +197,24 @@ func (s *BossServer) ShowMinions(ctx context.Context, _ *proto.BossShowMinionReq
 	}, nil
 }
 
-func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadRequest) (*proto.BossRunWorkloadResponse, error) {
-	log.Infof("GRPC: RunWorkload()")
+func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobRequest) (*proto.BossPrepareJobResponse, error) {
+	log.Infof("GRPC: PrepareJob()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	// Generate the ID for this job
+	jobId := s.getNextJobId()
+	log.Infof("PrepareJob(): Assigning JobId=%s", jobId)
 
 	// Partition the data among the number of minions
-	dataSpec := proto.DataSpecFromProto(in.DataSpec)
+	dataSpec := proto.DataSpecFromProto(in.GetJobSpec().GetDataSpec())
 	numRecs := dataSpec.KeyGenSpec.NumKeys()
 	fullRange := intgen.NewRange(0, numRecs)
 	numMinions := len(s.minionPools)
 	var assignedRanges []*intgen.Range
 
-	workloadName := in.GetWlSpec().GetWorkloadName()
+	// Get the job level workload spec, and do homework to determine per-minion workload spec
+	workloadName := in.GetJobSpec().GetWorkloadSpec().GetWorkloadName()
 	switch workloadName {
 	case "insert", "insert-txn", "delete", "delete-txn":
 		assignedRanges = fullRange.Partition(numMinions)
@@ -220,33 +223,32 @@ func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadR
 	default:
 		reason := fmt.Sprintf("invalid workload '%s'", workloadName)
 		log.Infof("RunWorkload(): %s", reason)
-		return &proto.BossRunWorkloadResponse{
+		return &proto.BossPrepareJobResponse{
 			OverallStatus: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: reason,
 			},
 		}, fmt.Errorf(reason)
 	}
-	log.Infof("RunWorkload(): Data partitioned among minions: %v", assignedRanges)
+	log.Infof("PrepareJob(): Data partitioned among minions: %v", assignedRanges)
 
-	// Run the workload
-	log.Infof("RunWorkload(): Now starting to run workload")
+	// Prepare individual minions
 	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
 	ch := make(chan *proto.MinionStatus)
 
 	i := 0
 	for addr := range s.minionPools {
-		log.Infof("RunWorkload(): Triggering on Minion %s", addr)
+		log.Infof("PrepareJob(): Preparing Minion %s", addr)
 		wlSpec := &proto.WorkloadSpec{
-			WorkloadName:  in.GetWlSpec().GetWorkloadName(),
+			WorkloadName:  in.GetJobSpec().GetWorkloadSpec().GetWorkloadName(),
 			AssignedRange: proto.RangeToProto(assignedRanges[i]),
-			TableName:     in.GetWlSpec().GetTableName(),
-			DurationSec:   in.GetWlSpec().GetDurationSec(),
-			Concurrency:   in.GetWlSpec().GetConcurrency(),
-			BatchSize:     in.GetWlSpec().GetBatchSize(),
+			TableName:     in.GetJobSpec().GetWorkloadSpec().GetTableName(),
+			DurationSec:   in.GetJobSpec().GetWorkloadSpec().GetDurationSec(),
+			Concurrency:   in.GetJobSpec().GetWorkloadSpec().GetConcurrency(),
+			BatchSize:     in.GetJobSpec().GetWorkloadSpec().GetBatchSize(),
 		}
 
-		go s.runWorkloadOnMinion(ctx, addr, in.GetDataSpec(), in.DbSpec, wlSpec, ch)
+		go s.prepareJobOnMinion(ctx, addr, jobId, in.GetJobDesc(), in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec, ch)
 		i++
 	}
 
@@ -267,23 +269,26 @@ func (s *BossServer) RunWorkload(ctx context.Context, in *proto.BossRunWorkloadR
 		}
 	}
 
-	log.Infof("RunWorkload(): completed")
-	return &proto.BossRunWorkloadResponse{
+	log.Infof("PrepareJob(): completed")
+	return &proto.BossPrepareJobResponse{
+		JobId:          jobId,
 		OverallStatus:  &overallStatus,
 		MinionStatuses: minionStatuses,
 	}, nil
 }
 
-func (s *BossServer) StopWorkload(ctx context.Context, _ *proto.BossStopWorkloadRequest) (*proto.BossStopWorkloadResponse, error) {
-	log.Infof("GRPC: StopWorkload()")
+func (s *BossServer) RunJob(ctx context.Context, in *proto.BossRunJobRequest) (*proto.BossRunJobResponse, error) {
+	log.Infof("GRPC: RunJob()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
 
+	// Run on individual minions
 	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
 	ch := make(chan *proto.MinionStatus)
 
 	for addr := range s.minionPools {
-		log.Infof("StopWorkload(): Stopping on Minion %s", addr)
-
-		go s.stopWorkloadOnMinion(ctx, addr, ch)
+		log.Infof("RunJob(): Triggering run on Minion %s", addr)
+		go s.runJobOnMinion(ctx, addr, ch)
 	}
 
 	// Collect execution results
@@ -303,8 +308,45 @@ func (s *BossServer) StopWorkload(ctx context.Context, _ *proto.BossStopWorkload
 		}
 	}
 
-	log.Infof("StopWorkload(): completed")
-	return &proto.BossStopWorkloadResponse{
+	log.Infof("RunJob(): completed")
+	return &proto.BossRunJobResponse{
+		OverallStatus:  &overallStatus,
+		MinionStatuses: minionStatuses,
+	}, nil
+}
+
+func (s *BossServer) StopJob(ctx context.Context, in *proto.BossStopJobRequest) (*proto.BossStopJobResponse, error) {
+	log.Infof("GRPC: StopJob()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	minionStatuses := make([]*proto.MinionStatus, len(s.minionPools))
+	ch := make(chan *proto.MinionStatus)
+
+	for addr := range s.minionPools {
+		log.Infof("StopJob(): Stopping on Minion %s", addr)
+		go s.stopJobOnMinion(ctx, addr, ch)
+	}
+
+	// Collect execution results
+	for i, _ := range minionStatuses {
+		minionStatuses[i] = <-ch
+	}
+
+	// Build overall status
+	overallStatus := proto.GeneralStatus{
+		IsOk:          true,
+		FailureReason: "",
+	}
+	for _, ms := range minionStatuses {
+		if !ms.Status.IsOk {
+			overallStatus.IsOk = false
+			overallStatus.FailureReason = "errors encountered on one or more minions"
+		}
+	}
+
+	log.Infof("StopJob(): completed")
+	return &proto.BossStopJobResponse{
 		OverallStatus:  &overallStatus,
 		MinionStatuses: minionStatuses,
 	}, nil
@@ -375,60 +417,7 @@ func (s *BossServer) getMinionStatus(ctx context.Context, minionAddr string, ch 
 	}
 }
 
-func (s *BossServer) loadDataSpecOnMinion(ctx context.Context, dataSpec *proto.DataSpec, minionAddr string, minionClient proto.MinionClient) error {
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	loadDataSpecResponse, err := minionClient.LoadDataSpec(grpcCtx, &proto.MinionLoadDataSpecRequest{
-		DataSpec: dataSpec,
-	})
-	grpcCtxCancel()
-
-	if err != nil {
-		return fmt.Errorf("LoadDataSpec request to %s failed (%v)", minionAddr, err)
-	}
-
-	if loadDataSpecResponse.GetStatus().GetIsOk() != true {
-		return fmt.Errorf("LoadDataSpec request to %s failed (%s)", minionAddr, loadDataSpecResponse.GetStatus().GetFailureReason())
-	}
-
-	log.Infof("RunWorkload(): LoadDataSpec request on %s successful", minionAddr)
-	return nil
-}
-
-func (s *BossServer) openDbConnectionOnMinion(ctx context.Context, dbSpec *proto.DBSpec, minionAddr string, minionClient proto.MinionClient) error {
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	openDbConnResponse, err := minionClient.OpenDBConnection(grpcCtx, &proto.MinionOpenDBConnectionRequest{
-		DbSpec: dbSpec,
-	})
-	grpcCtxCancel()
-
-	if err != nil {
-		return fmt.Errorf("OpenDBConnection request to %s failed (%v)", minionAddr, err)
-	}
-	if openDbConnResponse.GetStatus().GetIsOk() != true {
-		return fmt.Errorf("OpenDBConnection request to %s failed (%s)", minionAddr, openDbConnResponse.GetStatus().GetFailureReason())
-	}
-	log.Infof("RunWorkload(): OpenDBConnection on %s successful", minionAddr)
-	return nil
-}
-
-func (s *BossServer) startWorkloadOnMinion(ctx context.Context, wlSpec *proto.WorkloadSpec, minionAddr string, minionClient proto.MinionClient) error {
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	openDbConnResponse, err := minionClient.RunWorkload(grpcCtx, &proto.MinionRunWorkloadRequest{
-		WorkloadSpec: wlSpec,
-	})
-	grpcCtxCancel()
-
-	if err != nil {
-		return fmt.Errorf("RunWorkload request to %s failed (%v)", minionAddr, err)
-	}
-	if openDbConnResponse.GetStatus().GetIsOk() != true {
-		return fmt.Errorf("RunWorkload request to %s failed (%s)", minionAddr, openDbConnResponse.GetStatus().GetFailureReason())
-	}
-	log.Infof("RunWorkload(): RunWorkload on %s successful", minionAddr)
-	return nil
-}
-
-func (s *BossServer) runWorkloadOnMinion(ctx context.Context, addr string,
+func (s *BossServer) prepareJobOnMinion(ctx context.Context, addr, jobId, jobDesc string,
 	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec, ch chan *proto.MinionStatus) {
 
 	minionConnection, err := s.getConnectionForMinion(ctx, addr)
@@ -445,8 +434,18 @@ func (s *BossServer) runWorkloadOnMinion(ctx context.Context, addr string,
 	defer minionConnection.Close()
 
 	minionClient := proto.NewMinionClient(minionConnection)
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
+	res, err := minionClient.PrepareJob(grpcCtx, &proto.MinionPrepareJobRequest{
+		JobId:   jobId,
+		JobDesc: jobDesc,
+		JobSpec: &proto.JobSpec{
+			DataSpec:     dataSpec,
+			DbSpec:       dbSpec,
+			WorkloadSpec: wlSpec,
+		},
+	})
+	grpcCtxCancel()
 
-	err = s.loadDataSpecOnMinion(ctx, dataSpec, addr, minionClient)
 	if err != nil {
 		ch <- &proto.MinionStatus{
 			Addr: addr,
@@ -458,30 +457,18 @@ func (s *BossServer) runWorkloadOnMinion(ctx context.Context, addr string,
 		return
 	}
 
-	err = s.openDbConnectionOnMinion(ctx, dbSpec, addr, minionClient)
-	if err != nil {
+	if res.GetStatus().GetIsOk() != true {
 		ch <- &proto.MinionStatus{
 			Addr: addr,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: err.Error(),
+				FailureReason: res.GetStatus().GetFailureReason(),
 			},
 		}
 		return
 	}
 
-	err = s.startWorkloadOnMinion(ctx, wlSpec, addr, minionClient)
-	if err != nil {
-		ch <- &proto.MinionStatus{
-			Addr: addr,
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: err.Error(),
-			},
-		}
-		return
-	}
-
+	log.Infof("Successfully prepared minion %s", addr)
 	ch <- &proto.MinionStatus{
 		Addr: addr,
 		Status: &proto.GeneralStatus{
@@ -491,7 +478,58 @@ func (s *BossServer) runWorkloadOnMinion(ctx context.Context, addr string,
 	return
 }
 
-func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, addr string, ch chan *proto.MinionStatus) {
+func (s *BossServer) runJobOnMinion(ctx context.Context, addr string, ch chan *proto.MinionStatus) {
+	minionConnection, err := s.getConnectionForMinion(ctx, addr)
+	if err != nil {
+		ch <- &proto.MinionStatus{
+			Addr: addr,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: fmt.Sprintf("failed to get client: %s", err.Error()),
+			},
+		}
+		return
+	}
+	defer minionConnection.Close()
+
+	minionClient := proto.NewMinionClient(minionConnection)
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
+	res, err := minionClient.RunJob(grpcCtx, &proto.MinionRunJobRequest{})
+	grpcCtxCancel()
+
+	if err != nil {
+		ch <- &proto.MinionStatus{
+			Addr: addr,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}
+		return
+	}
+
+	if res.GetStatus().GetIsOk() != true {
+		ch <- &proto.MinionStatus{
+			Addr: addr,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: res.GetStatus().GetFailureReason(),
+			},
+		}
+		return
+	}
+
+	log.Infof("Successfully triggered run on minion %s", addr)
+	ch <- &proto.MinionStatus{
+		Addr: addr,
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+	}
+	return
+}
+
+func (s *BossServer) stopJobOnMinion(ctx context.Context, addr string, ch chan *proto.MinionStatus) {
 	minionConnection, err := s.getConnectionForMinion(ctx, addr)
 	if err != nil {
 		ch <- &proto.MinionStatus{
@@ -509,7 +547,7 @@ func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, addr string, ch c
 
 	// Stop workload
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	stopWorkloadResponse, err := minionClient.StopWorkload(grpcCtx, &proto.MinionStopWorkloadRequest{})
+	stopWorkloadResponse, err := minionClient.StopJob(grpcCtx, &proto.MinionStopJobRequest{})
 	grpcCtxCancel()
 
 	if err != nil {
@@ -534,6 +572,7 @@ func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, addr string, ch c
 		return
 	}
 
+	log.Infof("Successfully triggered stop on minion %s", addr)
 	ch <- &proto.MinionStatus{
 		Addr: addr,
 		Status: &proto.GeneralStatus{
@@ -541,4 +580,10 @@ func (s *BossServer) stopWorkloadOnMinion(ctx context.Context, addr string, ch c
 		},
 	}
 	return
+}
+
+func (s *BossServer) getNextJobId() string {
+	id := fmt.Sprintf("%s-%04d", s.pid, s.nextJobNum)
+	s.nextJobNum++
+	return id
 }

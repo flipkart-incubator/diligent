@@ -14,9 +14,10 @@ service Boss {
   rpc UnregisterMinion (BossUnregisterMinonRequest) returns (BossUnregisterMinionResponse);
   rpc ShowMinions (BossShowMinionRequest) returns (BossShowMinionResponse);
 
-  // Workload Related
-  rpc RunWorkload (BossRunWorkloadRequest) returns (BossRunWorkloadResponse);
-  rpc StopWorkload (BossStopWorkloadRequest) returns (BossStopWorkloadResponse);
+  // Job Control
+  rpc PrepareJob (BossPrepareJobRequest) returns (BossPrepareJobResponse);
+  rpc RunJob (BossRunJobRequest) returns (BossRunJobResponse);
+  rpc StopJob (BossStopJobRequest) returns (BossStopJobResponse);
 }
 
 message BossPingRequest {
@@ -62,21 +63,29 @@ message MinionStatus {
   GeneralStatus status = 2;
 }
 
-message BossRunWorkloadRequest {
-  DataSpec data_spec = 1;
-  DBSpec db_spec = 2;
-  WorkloadSpec wl_spec = 3;
+message BossPrepareJobRequest {
+  JobSpec job_spec = 1;
+  string job_desc = 2;
 }
 
-message BossRunWorkloadResponse {
+message BossPrepareJobResponse {
+  string job_id = 1;
+  GeneralStatus overall_status = 2;
+  repeated MinionStatus minion_statuses = 3;
+}
+
+message BossRunJobRequest {
+}
+
+message BossRunJobResponse {
   GeneralStatus overall_status = 1;
   repeated MinionStatus minion_statuses = 2;
 }
 
-message BossStopWorkloadRequest {
+message BossStopJobRequest {
 }
 
-message BossStopWorkloadResponse {
-  GeneralStatus overall_status = 1;
-  repeated MinionStatus minion_statuses = 2;
+message BossStopJobResponse {
+    GeneralStatus overall_status = 1;
+    repeated MinionStatus minion_statuses = 2;
 }

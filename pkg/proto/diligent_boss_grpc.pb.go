@@ -28,9 +28,10 @@ type BossClient interface {
 	RegisterMinion(ctx context.Context, in *BossRegisterMinionRequest, opts ...grpc.CallOption) (*BossRegisterMinionResponse, error)
 	UnregisterMinion(ctx context.Context, in *BossUnregisterMinonRequest, opts ...grpc.CallOption) (*BossUnregisterMinionResponse, error)
 	ShowMinions(ctx context.Context, in *BossShowMinionRequest, opts ...grpc.CallOption) (*BossShowMinionResponse, error)
-	// Workload Related
-	RunWorkload(ctx context.Context, in *BossRunWorkloadRequest, opts ...grpc.CallOption) (*BossRunWorkloadResponse, error)
-	StopWorkload(ctx context.Context, in *BossStopWorkloadRequest, opts ...grpc.CallOption) (*BossStopWorkloadResponse, error)
+	// Job Control
+	PrepareJob(ctx context.Context, in *BossPrepareJobRequest, opts ...grpc.CallOption) (*BossPrepareJobResponse, error)
+	RunJob(ctx context.Context, in *BossRunJobRequest, opts ...grpc.CallOption) (*BossRunJobResponse, error)
+	StopJob(ctx context.Context, in *BossStopJobRequest, opts ...grpc.CallOption) (*BossStopJobResponse, error)
 }
 
 type bossClient struct {
@@ -77,18 +78,27 @@ func (c *bossClient) ShowMinions(ctx context.Context, in *BossShowMinionRequest,
 	return out, nil
 }
 
-func (c *bossClient) RunWorkload(ctx context.Context, in *BossRunWorkloadRequest, opts ...grpc.CallOption) (*BossRunWorkloadResponse, error) {
-	out := new(BossRunWorkloadResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/RunWorkload", in, out, opts...)
+func (c *bossClient) PrepareJob(ctx context.Context, in *BossPrepareJobRequest, opts ...grpc.CallOption) (*BossPrepareJobResponse, error) {
+	out := new(BossPrepareJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/PrepareJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *bossClient) StopWorkload(ctx context.Context, in *BossStopWorkloadRequest, opts ...grpc.CallOption) (*BossStopWorkloadResponse, error) {
-	out := new(BossStopWorkloadResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/StopWorkload", in, out, opts...)
+func (c *bossClient) RunJob(ctx context.Context, in *BossRunJobRequest, opts ...grpc.CallOption) (*BossRunJobResponse, error) {
+	out := new(BossRunJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/RunJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bossClient) StopJob(ctx context.Context, in *BossStopJobRequest, opts ...grpc.CallOption) (*BossStopJobResponse, error) {
+	out := new(BossStopJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/StopJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,9 +115,10 @@ type BossServer interface {
 	RegisterMinion(context.Context, *BossRegisterMinionRequest) (*BossRegisterMinionResponse, error)
 	UnregisterMinion(context.Context, *BossUnregisterMinonRequest) (*BossUnregisterMinionResponse, error)
 	ShowMinions(context.Context, *BossShowMinionRequest) (*BossShowMinionResponse, error)
-	// Workload Related
-	RunWorkload(context.Context, *BossRunWorkloadRequest) (*BossRunWorkloadResponse, error)
-	StopWorkload(context.Context, *BossStopWorkloadRequest) (*BossStopWorkloadResponse, error)
+	// Job Control
+	PrepareJob(context.Context, *BossPrepareJobRequest) (*BossPrepareJobResponse, error)
+	RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error)
+	StopJob(context.Context, *BossStopJobRequest) (*BossStopJobResponse, error)
 	mustEmbedUnimplementedBossServer()
 }
 
@@ -127,11 +138,14 @@ func (UnimplementedBossServer) UnregisterMinion(context.Context, *BossUnregister
 func (UnimplementedBossServer) ShowMinions(context.Context, *BossShowMinionRequest) (*BossShowMinionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ShowMinions not implemented")
 }
-func (UnimplementedBossServer) RunWorkload(context.Context, *BossRunWorkloadRequest) (*BossRunWorkloadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RunWorkload not implemented")
+func (UnimplementedBossServer) PrepareJob(context.Context, *BossPrepareJobRequest) (*BossPrepareJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareJob not implemented")
 }
-func (UnimplementedBossServer) StopWorkload(context.Context, *BossStopWorkloadRequest) (*BossStopWorkloadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopWorkload not implemented")
+func (UnimplementedBossServer) RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunJob not implemented")
+}
+func (UnimplementedBossServer) StopJob(context.Context, *BossStopJobRequest) (*BossStopJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopJob not implemented")
 }
 func (UnimplementedBossServer) mustEmbedUnimplementedBossServer() {}
 
@@ -218,38 +232,56 @@ func _Boss_ShowMinions_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_RunWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BossRunWorkloadRequest)
+func _Boss_PrepareJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossPrepareJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).RunWorkload(ctx, in)
+		return srv.(BossServer).PrepareJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/RunWorkload",
+		FullMethod: "/proto.Boss/PrepareJob",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).RunWorkload(ctx, req.(*BossRunWorkloadRequest))
+		return srv.(BossServer).PrepareJob(ctx, req.(*BossPrepareJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_StopWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BossStopWorkloadRequest)
+func _Boss_RunJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossRunJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).StopWorkload(ctx, in)
+		return srv.(BossServer).RunJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/StopWorkload",
+		FullMethod: "/proto.Boss/RunJob",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).StopWorkload(ctx, req.(*BossStopWorkloadRequest))
+		return srv.(BossServer).RunJob(ctx, req.(*BossRunJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Boss_StopJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossStopJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).StopJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/StopJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).StopJob(ctx, req.(*BossStopJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -278,12 +310,16 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Boss_ShowMinions_Handler,
 		},
 		{
-			MethodName: "RunWorkload",
-			Handler:    _Boss_RunWorkload_Handler,
+			MethodName: "PrepareJob",
+			Handler:    _Boss_PrepareJob_Handler,
 		},
 		{
-			MethodName: "StopWorkload",
-			Handler:    _Boss_StopWorkload_Handler,
+			MethodName: "RunJob",
+			Handler:    _Boss_RunJob_Handler,
+		},
+		{
+			MethodName: "StopJob",
+			Handler:    _Boss_StopJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

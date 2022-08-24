@@ -68,10 +68,6 @@ func (wl *Workload) Start(duration time.Duration) {
 	for _, w := range wl.workers {
 		go w.Run(wl.ctx, wl.waitGroup)
 	}
-
-	// Create a goroutine which will wait in the background on the workload to finish
-	// that will result in the isRunning state to get updated to false on completion
-	go wl.Wait()
 }
 
 func (wl *Workload) Cancel() {
@@ -82,7 +78,7 @@ func (wl *Workload) Cancel() {
 	}
 }
 
-func (wl *Workload) Wait() {
+func (wl *Workload) WaitForCompletion() {
 	// Wait for workers to finish
 	wl.waitGroup.Wait()
 

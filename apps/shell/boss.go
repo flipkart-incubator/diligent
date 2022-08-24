@@ -61,9 +61,9 @@ func init() {
 	}
 	bossCmd.AddCommand(bossMinionShowCmd)
 
-	bossRunWorkloadCmd := &grumble.Command{
-		Name: "run-workload",
-		Help: "Run a workload",
+	bossPrepareJobCmd := &grumble.Command{
+		Name: "prepare-job",
+		Help: "Prepare to run a job",
 		Flags: func(f *grumble.Flags) {
 			f.String("s", "dataspec-file", "", "name of the dataspec file")
 			f.String("r", "db-driver", "", "db driver to use")
@@ -71,21 +71,29 @@ func init() {
 			f.Int("t", "duration", 0, "duration after which workload is terminated (seconds). zero for no timout (default)")
 			f.Int("c", "concurrency", 1, "number of concurrent workers")
 			f.Int("k", "batch-size", 10, "number of statements in a transaction (for transaction based workloads)")
+			f.String("m", "description", "", "a description of the job")
 		},
 		Args: func(a *grumble.Args) {
 			a.String("workload", "name of workload to run [insert,insert-txn,select,select-txn,update,update-txn,delete,delete-txn", grumble.Default(""))
 			a.String("table", "name of the table to run the workload on", grumble.Default(""))
 		},
-		Run: bossRunWorkload,
+		Run: bossPrepareJob,
 	}
-	bossCmd.AddCommand(bossRunWorkloadCmd)
+	bossCmd.AddCommand(bossPrepareJobCmd)
 
-	bossStopWorkloadCmd := &grumble.Command{
-		Name: "stop-workload",
-		Help: "Stop any running workload",
-		Run:  bossStopWorkload,
+	bossRunJobCmd := &grumble.Command{
+		Name: "run-job",
+		Help: "Start the execution of the current job",
+		Run:  bossRunJob,
 	}
-	bossCmd.AddCommand(bossStopWorkloadCmd)
+	bossCmd.AddCommand(bossRunJobCmd)
+
+	bossStopJobCmd := &grumble.Command{
+		Name: "stop-job",
+		Help: "Stop the execution of the current job",
+		Run:  bossStopJob,
+	}
+	bossCmd.AddCommand(bossStopJobCmd)
 }
 
 func bossPing(c *grumble.Context) error {
@@ -209,7 +217,7 @@ func bossShowMinions(c *grumble.Context) error {
 	return nil
 }
 
-func bossRunWorkload(c *grumble.Context) error {
+func bossPrepareJob(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 
 	// Dataspec param
@@ -272,7 +280,11 @@ func bossRunWorkload(c *grumble.Context) error {
 		return err
 	}
 
-	c.App.Println("Running workload:")
+	// Description
+	jobDesc := c.Flags.String("description")
+
+	c.App.Println("Preparing job:")
+	c.App.Println("    Description:", jobDesc)
 	c.App.Println("    DataSpec:")
 	c.App.Println("    	file:", dataspecFileName)
 	c.App.Println("    	numRows:", dataSpec.KeyGenSpec.NumKeys())
@@ -294,21 +306,56 @@ func bossRunWorkload(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.RunWorkload(grpcCtx, &proto.BossRunWorkloadRequest{
-		DataSpec: proto.DataSpecToProto(dataSpec),
-		DbSpec: &proto.DBSpec{
-			Driver: dbDriver,
-			Url:    dbUrl,
-		},
-		WlSpec: &proto.WorkloadSpec{
-			WorkloadName:  workloadName,
-			AssignedRange: nil,
-			TableName:     table,
-			DurationSec:   int32(durationSec),
-			Concurrency:   int32(concurrency),
-			BatchSize:     int32(batchSize),
+	res, err := bossClient.PrepareJob(grpcCtx, &proto.BossPrepareJobRequest{
+		JobDesc: jobDesc,
+		JobSpec: &proto.JobSpec{
+			DataSpec: proto.DataSpecToProto(dataSpec),
+			DbSpec: &proto.DBSpec{
+				Driver: dbDriver,
+				Url:    dbUrl,
+			},
+			WorkloadSpec: &proto.WorkloadSpec{
+				WorkloadName:  workloadName,
+				AssignedRange: nil,
+				TableName:     table,
+				DurationSec:   int32(durationSec),
+				Concurrency:   int32(concurrency),
+				BatchSize:     int32(batchSize),
+			},
 		},
 	})
+	reqDuration := time.Since(reqStart)
+	grpcCancel()
+	if err != nil {
+		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
+		return err
+	}
+	if res.GetOverallStatus().GetIsOk() != true {
+		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
+		for _, ms := range res.GetMinionStatuses() {
+			if ms.GetStatus().GetIsOk() {
+				c.App.Printf("%s : OK\n", ms.GetAddr())
+			} else {
+				c.App.Printf("%s : Failed [reason=%s]\n", ms.GetAddr(), ms.GetStatus().GetFailureReason())
+			}
+		}
+		return fmt.Errorf(res.GetOverallStatus().GetFailureReason())
+	}
+	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
+	c.App.Printf("JobId=%s\n", res.GetJobId())
+	return nil
+}
+
+func bossRunJob(c *grumble.Context) error {
+	bossAddr := c.Flags.String("boss")
+	bossClient, err := getBossClient(bossAddr)
+	if err != nil {
+		return err
+	}
+
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
+	reqStart := time.Now()
+	res, err := bossClient.RunJob(grpcCtx, &proto.BossRunJobRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {
@@ -330,7 +377,7 @@ func bossRunWorkload(c *grumble.Context) error {
 	return nil
 }
 
-func bossStopWorkload(c *grumble.Context) error {
+func bossStopJob(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -339,7 +386,7 @@ func bossStopWorkload(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.StopWorkload(grpcCtx, &proto.BossStopWorkloadRequest{})
+	res, err := bossClient.StopJob(grpcCtx, &proto.BossStopJobRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {

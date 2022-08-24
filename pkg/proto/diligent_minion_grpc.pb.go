@@ -24,16 +24,14 @@ const _ = grpc.SupportPackageIsVersion7
 type MinionClient interface {
 	// Ping
 	Ping(ctx context.Context, in *MinionPingRequest, opts ...grpc.CallOption) (*MinionPingResponse, error)
-	// Dataspec Related
-	LoadDataSpec(ctx context.Context, in *MinionLoadDataSpecRequest, opts ...grpc.CallOption) (*MinionLoadDataSpecResponse, error)
+	// Job Control
+	PrepareJob(ctx context.Context, in *MinionPrepareJobRequest, opts ...grpc.CallOption) (*MinionPrepareJobResponse, error)
+	RunJob(ctx context.Context, in *MinionRunJobRequest, opts ...grpc.CallOption) (*MinionRunJobResponse, error)
+	StopJob(ctx context.Context, in *MinionStopJobRequest, opts ...grpc.CallOption) (*MinionStopJobResponse, error)
+	// Info Related
 	GetDataSpecInfo(ctx context.Context, in *MinionGetDataSpecInfoRequest, opts ...grpc.CallOption) (*MinionGetDataSpecInfoResponse, error)
-	// DB Connection Related
-	OpenDBConnection(ctx context.Context, in *MinionOpenDBConnectionRequest, opts ...grpc.CallOption) (*MinionOpenDBConnectionResponse, error)
 	GetDBConnectionInfo(ctx context.Context, in *MinionGetDBConnectionInfoRequest, opts ...grpc.CallOption) (*MinionGetDBConnectionInfoResponse, error)
-	// Workload Related
-	RunWorkload(ctx context.Context, in *MinionRunWorkloadRequest, opts ...grpc.CallOption) (*MinionRunWorkloadResponse, error)
 	GetWorkloadInfo(ctx context.Context, in *MinionGetWorkloadInfoRequest, opts ...grpc.CallOption) (*MinionGetWorkloadInfoResponse, error)
-	StopWorkload(ctx context.Context, in *MinionStopWorkloadRequest, opts ...grpc.CallOption) (*MinionStopWorkloadResponse, error)
 }
 
 type minionClient struct {
@@ -53,9 +51,27 @@ func (c *minionClient) Ping(ctx context.Context, in *MinionPingRequest, opts ...
 	return out, nil
 }
 
-func (c *minionClient) LoadDataSpec(ctx context.Context, in *MinionLoadDataSpecRequest, opts ...grpc.CallOption) (*MinionLoadDataSpecResponse, error) {
-	out := new(MinionLoadDataSpecResponse)
-	err := c.cc.Invoke(ctx, "/proto.Minion/LoadDataSpec", in, out, opts...)
+func (c *minionClient) PrepareJob(ctx context.Context, in *MinionPrepareJobRequest, opts ...grpc.CallOption) (*MinionPrepareJobResponse, error) {
+	out := new(MinionPrepareJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Minion/PrepareJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *minionClient) RunJob(ctx context.Context, in *MinionRunJobRequest, opts ...grpc.CallOption) (*MinionRunJobResponse, error) {
+	out := new(MinionRunJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Minion/RunJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *minionClient) StopJob(ctx context.Context, in *MinionStopJobRequest, opts ...grpc.CallOption) (*MinionStopJobResponse, error) {
+	out := new(MinionStopJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Minion/StopJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,27 +87,9 @@ func (c *minionClient) GetDataSpecInfo(ctx context.Context, in *MinionGetDataSpe
 	return out, nil
 }
 
-func (c *minionClient) OpenDBConnection(ctx context.Context, in *MinionOpenDBConnectionRequest, opts ...grpc.CallOption) (*MinionOpenDBConnectionResponse, error) {
-	out := new(MinionOpenDBConnectionResponse)
-	err := c.cc.Invoke(ctx, "/proto.Minion/OpenDBConnection", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *minionClient) GetDBConnectionInfo(ctx context.Context, in *MinionGetDBConnectionInfoRequest, opts ...grpc.CallOption) (*MinionGetDBConnectionInfoResponse, error) {
 	out := new(MinionGetDBConnectionInfoResponse)
 	err := c.cc.Invoke(ctx, "/proto.Minion/GetDBConnectionInfo", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *minionClient) RunWorkload(ctx context.Context, in *MinionRunWorkloadRequest, opts ...grpc.CallOption) (*MinionRunWorkloadResponse, error) {
-	out := new(MinionRunWorkloadResponse)
-	err := c.cc.Invoke(ctx, "/proto.Minion/RunWorkload", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,31 +105,20 @@ func (c *minionClient) GetWorkloadInfo(ctx context.Context, in *MinionGetWorkloa
 	return out, nil
 }
 
-func (c *minionClient) StopWorkload(ctx context.Context, in *MinionStopWorkloadRequest, opts ...grpc.CallOption) (*MinionStopWorkloadResponse, error) {
-	out := new(MinionStopWorkloadResponse)
-	err := c.cc.Invoke(ctx, "/proto.Minion/StopWorkload", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // MinionServer is the server API for Minion service.
 // All implementations must embed UnimplementedMinionServer
 // for forward compatibility
 type MinionServer interface {
 	// Ping
 	Ping(context.Context, *MinionPingRequest) (*MinionPingResponse, error)
-	// Dataspec Related
-	LoadDataSpec(context.Context, *MinionLoadDataSpecRequest) (*MinionLoadDataSpecResponse, error)
+	// Job Control
+	PrepareJob(context.Context, *MinionPrepareJobRequest) (*MinionPrepareJobResponse, error)
+	RunJob(context.Context, *MinionRunJobRequest) (*MinionRunJobResponse, error)
+	StopJob(context.Context, *MinionStopJobRequest) (*MinionStopJobResponse, error)
+	// Info Related
 	GetDataSpecInfo(context.Context, *MinionGetDataSpecInfoRequest) (*MinionGetDataSpecInfoResponse, error)
-	// DB Connection Related
-	OpenDBConnection(context.Context, *MinionOpenDBConnectionRequest) (*MinionOpenDBConnectionResponse, error)
 	GetDBConnectionInfo(context.Context, *MinionGetDBConnectionInfoRequest) (*MinionGetDBConnectionInfoResponse, error)
-	// Workload Related
-	RunWorkload(context.Context, *MinionRunWorkloadRequest) (*MinionRunWorkloadResponse, error)
 	GetWorkloadInfo(context.Context, *MinionGetWorkloadInfoRequest) (*MinionGetWorkloadInfoResponse, error)
-	StopWorkload(context.Context, *MinionStopWorkloadRequest) (*MinionStopWorkloadResponse, error)
 	mustEmbedUnimplementedMinionServer()
 }
 
@@ -142,26 +129,23 @@ type UnimplementedMinionServer struct {
 func (UnimplementedMinionServer) Ping(context.Context, *MinionPingRequest) (*MinionPingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedMinionServer) LoadDataSpec(context.Context, *MinionLoadDataSpecRequest) (*MinionLoadDataSpecResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LoadDataSpec not implemented")
+func (UnimplementedMinionServer) PrepareJob(context.Context, *MinionPrepareJobRequest) (*MinionPrepareJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareJob not implemented")
+}
+func (UnimplementedMinionServer) RunJob(context.Context, *MinionRunJobRequest) (*MinionRunJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunJob not implemented")
+}
+func (UnimplementedMinionServer) StopJob(context.Context, *MinionStopJobRequest) (*MinionStopJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopJob not implemented")
 }
 func (UnimplementedMinionServer) GetDataSpecInfo(context.Context, *MinionGetDataSpecInfoRequest) (*MinionGetDataSpecInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDataSpecInfo not implemented")
 }
-func (UnimplementedMinionServer) OpenDBConnection(context.Context, *MinionOpenDBConnectionRequest) (*MinionOpenDBConnectionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OpenDBConnection not implemented")
-}
 func (UnimplementedMinionServer) GetDBConnectionInfo(context.Context, *MinionGetDBConnectionInfoRequest) (*MinionGetDBConnectionInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDBConnectionInfo not implemented")
 }
-func (UnimplementedMinionServer) RunWorkload(context.Context, *MinionRunWorkloadRequest) (*MinionRunWorkloadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RunWorkload not implemented")
-}
 func (UnimplementedMinionServer) GetWorkloadInfo(context.Context, *MinionGetWorkloadInfoRequest) (*MinionGetWorkloadInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetWorkloadInfo not implemented")
-}
-func (UnimplementedMinionServer) StopWorkload(context.Context, *MinionStopWorkloadRequest) (*MinionStopWorkloadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopWorkload not implemented")
 }
 func (UnimplementedMinionServer) mustEmbedUnimplementedMinionServer() {}
 
@@ -194,20 +178,56 @@ func _Minion_Ping_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Minion_LoadDataSpec_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionLoadDataSpecRequest)
+func _Minion_PrepareJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MinionPrepareJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MinionServer).LoadDataSpec(ctx, in)
+		return srv.(MinionServer).PrepareJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Minion/LoadDataSpec",
+		FullMethod: "/proto.Minion/PrepareJob",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinionServer).LoadDataSpec(ctx, req.(*MinionLoadDataSpecRequest))
+		return srv.(MinionServer).PrepareJob(ctx, req.(*MinionPrepareJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Minion_RunJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MinionRunJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinionServer).RunJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Minion/RunJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinionServer).RunJob(ctx, req.(*MinionRunJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Minion_StopJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MinionStopJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinionServer).StopJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Minion/StopJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinionServer).StopJob(ctx, req.(*MinionStopJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -230,24 +250,6 @@ func _Minion_GetDataSpecInfo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Minion_OpenDBConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionOpenDBConnectionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MinionServer).OpenDBConnection(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.Minion/OpenDBConnection",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinionServer).OpenDBConnection(ctx, req.(*MinionOpenDBConnectionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Minion_GetDBConnectionInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MinionGetDBConnectionInfoRequest)
 	if err := dec(in); err != nil {
@@ -262,24 +264,6 @@ func _Minion_GetDBConnectionInfo_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MinionServer).GetDBConnectionInfo(ctx, req.(*MinionGetDBConnectionInfoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Minion_RunWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionRunWorkloadRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MinionServer).RunWorkload(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.Minion/RunWorkload",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinionServer).RunWorkload(ctx, req.(*MinionRunWorkloadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -302,24 +286,6 @@ func _Minion_GetWorkloadInfo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Minion_StopWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionStopWorkloadRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MinionServer).StopWorkload(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.Minion/StopWorkload",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinionServer).StopWorkload(ctx, req.(*MinionStopWorkloadRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Minion_ServiceDesc is the grpc.ServiceDesc for Minion service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -332,32 +298,28 @@ var Minion_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Minion_Ping_Handler,
 		},
 		{
-			MethodName: "LoadDataSpec",
-			Handler:    _Minion_LoadDataSpec_Handler,
+			MethodName: "PrepareJob",
+			Handler:    _Minion_PrepareJob_Handler,
+		},
+		{
+			MethodName: "RunJob",
+			Handler:    _Minion_RunJob_Handler,
+		},
+		{
+			MethodName: "StopJob",
+			Handler:    _Minion_StopJob_Handler,
 		},
 		{
 			MethodName: "GetDataSpecInfo",
 			Handler:    _Minion_GetDataSpecInfo_Handler,
 		},
 		{
-			MethodName: "OpenDBConnection",
-			Handler:    _Minion_OpenDBConnection_Handler,
-		},
-		{
 			MethodName: "GetDBConnectionInfo",
 			Handler:    _Minion_GetDBConnectionInfo_Handler,
 		},
 		{
-			MethodName: "RunWorkload",
-			Handler:    _Minion_RunWorkload_Handler,
-		},
-		{
 			MethodName: "GetWorkloadInfo",
 			Handler:    _Minion_GetWorkloadInfo_Handler,
-		},
-		{
-			MethodName: "StopWorkload",
-			Handler:    _Minion_StopWorkload_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

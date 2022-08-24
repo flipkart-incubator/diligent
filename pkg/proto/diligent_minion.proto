@@ -9,18 +9,15 @@ service Minion {
   // Ping
   rpc Ping (MinionPingRequest) returns (MinionPingResponse);
 
-  // Dataspec Related
-  rpc LoadDataSpec (MinionLoadDataSpecRequest) returns (MinionLoadDataSpecResponse);
+  // Job Control
+  rpc PrepareJob (MinionPrepareJobRequest) returns (MinionPrepareJobResponse);
+  rpc RunJob (MinionRunJobRequest) returns (MinionRunJobResponse);
+  rpc StopJob (MinionStopJobRequest) returns (MinionStopJobResponse);
+
+  // Info Related
   rpc GetDataSpecInfo (MinionGetDataSpecInfoRequest) returns (MinionGetDataSpecInfoResponse);
-
-  // DB Connection Related
-  rpc OpenDBConnection (MinionOpenDBConnectionRequest) returns (MinionOpenDBConnectionResponse);
   rpc GetDBConnectionInfo (MinionGetDBConnectionInfoRequest) returns (MinionGetDBConnectionInfoResponse);
-
-  // Workload Related
-  rpc RunWorkload (MinionRunWorkloadRequest) returns (MinionRunWorkloadResponse);
   rpc GetWorkloadInfo (MinionGetWorkloadInfoRequest) returns (MinionGetWorkloadInfoResponse);
-  rpc StopWorkload (MinionStopWorkloadRequest) returns (MinionStopWorkloadResponse);
 }
 
 message MinionPingRequest {
@@ -31,13 +28,27 @@ message MinionPingResponse {
   ProcessInfo process_info = 2;
 }
 
-message MinionLoadDataSpecRequest {
-  string spec_name = 1;
-  DataSpec data_spec = 2;
-  int32 hash = 3;
+message MinionPrepareJobRequest {
+  string job_id = 1;
+  string job_desc = 2;
+  JobSpec job_spec = 3;
 }
 
-message MinionLoadDataSpecResponse {
+message MinionPrepareJobResponse {
+  GeneralStatus status = 1;
+}
+
+message MinionRunJobRequest {
+}
+
+message MinionRunJobResponse {
+  GeneralStatus status = 1;
+}
+
+message MinionStopJobRequest {
+}
+
+message MinionStopJobResponse {
   GeneralStatus status = 1;
 }
 
@@ -49,35 +60,12 @@ message MinionGetDataSpecInfoResponse {
   DataSpecInfo data_spec_info = 2;
 }
 
-message MinionOpenDBConnectionRequest {
-  DBSpec db_spec = 1;
-}
-
-message MinionOpenDBConnectionResponse {
-  GeneralStatus status = 1;
-}
-
 message MinionGetDBConnectionInfoRequest {
 }
 
 message MinionGetDBConnectionInfoResponse {
   GeneralStatus status = 1;
   DBSpec db_spec = 2;
-}
-
-message CloseDBConnectionRequest {
-}
-
-message CloseDBConnectionResponse {
-  GeneralStatus status = 1;
-}
-
-message MinionRunWorkloadRequest {
-  WorkloadSpec workload_spec = 1;
-}
-
-message MinionRunWorkloadResponse {
-  GeneralStatus status = 1;
 }
 
 message MinionGetWorkloadInfoRequest {
@@ -87,11 +75,4 @@ message MinionGetWorkloadInfoResponse {
   GeneralStatus status = 1;
   WorkloadSpec workload_spec = 2;
   bool is_running = 3;
-}
-
-message MinionStopWorkloadRequest {
-}
-
-message MinionStopWorkloadResponse {
-  GeneralStatus status = 1;
 }

@@ -3,6 +3,12 @@ syntax = "proto3";
 package proto;
 option go_package = "./proto";
 
+message JobSpec {
+  DataSpec data_spec = 1;
+  DBSpec db_spec = 2;
+  WorkloadSpec workload_spec = 3;
+}
+
 // Proto representation of datagen.Spec
 message DataSpec {
   string spec_type = 1;

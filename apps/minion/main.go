@@ -26,16 +26,16 @@ func main() {
 	bossAddr := flag.String("boss", "", "boss host[:port]")
 	flag.Parse()
 
-	log.Printf("Starting diligent-minion process\n")
-	log.Printf("Build information:")
-	log.Printf("go-version : %s\n", buildinfo.GoVersion)
-	log.Printf("commit-hash: %s\n", buildinfo.CommitHash)
-	log.Printf("build-time : %s\n", buildinfo.BuildTime)
-	log.Printf("Arguments:")
-	log.Printf("grpc-addr  : %s\n", *grpcAddr)
-	log.Printf("metrics-addr  : %s\n", *metricsAddr)
-	log.Printf("advertise-addr  : %s\n", *advertiseAddr)
-	log.Printf("boss  : %s\n", *bossAddr)
+	log.Infof("Starting diligent-minion process\n")
+	log.Infof("Build information:")
+	log.Infof("go-version : %s\n", buildinfo.GoVersion)
+	log.Infof("commit-hash: %s\n", buildinfo.CommitHash)
+	log.Infof("build-time : %s\n", buildinfo.BuildTime)
+	log.Infof("Arguments:")
+	log.Infof("grpc-addr  : %s\n", *grpcAddr)
+	log.Infof("metrics-addr  : %s\n", *metricsAddr)
+	log.Infof("advertise-addr  : %s\n", *advertiseAddr)
+	log.Infof("boss  : %s\n", *bossAddr)
 
 	if *bossAddr == "" {
 		log.Fatal("required argument boss not provided")
@@ -64,8 +64,11 @@ func main() {
 		*bossAddr = net.JoinHostPort(*bossAddr, defaultBossPort)
 	}
 
-	log.Infof("Creating minion server instance. grpc-addr=%s, metrics-addr=%s, advertise-addr=%s, boss-addr=%s",
-		*grpcAddr, *metricsAddr, *advertiseAddr, *bossAddr)
+	log.Infof("Creating minion server instance")
+	log.Infof("grpc-addr  : %s\n", *grpcAddr)
+	log.Infof("metrics-addr  : %s\n", *metricsAddr)
+	log.Infof("advertise-addr  : %s\n", *advertiseAddr)
+	log.Infof("boss  : %s\n", *bossAddr)
 
 	minion := NewMinionServer(*grpcAddr, *metricsAddr, *advertiseAddr, *bossAddr)
 	err := minion.RegisterWithBoss()
