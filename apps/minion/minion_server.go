@@ -82,7 +82,6 @@ type MinionServer struct {
 	startTime time.Time //startTime is when this server started executing
 
 	currentJobInfo *JobInfo
-	pastJobInfos   []*JobInfo
 	data           *DataContext
 	db             *DBContext
 	workload       *WorkloadContext
@@ -103,7 +102,6 @@ func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *Min
 		startTime: time.Now(),
 
 		currentJobInfo: nil,
-		pastJobInfos:   nil,
 
 		data:     nil,
 		db:       nil,
@@ -227,7 +225,6 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 		log.Infof("PrepareJob(): Minion was prepared for job %s. Cleaning up previous state", s.currentJobInfo.jobId)
 		s.currentJobInfo.jobState = EndedNeverRan
 		s.currentJobInfo.endTime = time.Now()
-		s.pastJobInfos = append(s.pastJobInfos, s.currentJobInfo)
 		s.currentJobInfo = nil
 		s.data = nil
 		if s.db != nil {
