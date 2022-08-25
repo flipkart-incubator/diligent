@@ -32,6 +32,8 @@ message MinionPrepareJobRequest {
 
 message MinionPrepareJobResponse {
   GeneralStatus status = 1;
+  string pid = 2;
+  string job_id = 3;
 }
 
 message MinionRunJobRequest {
@@ -39,6 +41,8 @@ message MinionRunJobRequest {
 
 message MinionRunJobResponse {
   GeneralStatus status = 1;
+  string pid = 2;
+  string job_id = 3;
 }
 
 message MinionStopJobRequest {
@@ -46,5 +50,7 @@ message MinionStopJobRequest {
 
 message MinionStopJobResponse {
   GeneralStatus status = 1;
+  string pid = 2;
+  string job_id = 3;
 }
 

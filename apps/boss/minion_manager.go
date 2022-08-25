@@ -4,65 +4,37 @@ import (
 	"context"
 	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
-	grpcpool "github.com/processout/grpc-go-pool"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"sync"
-	"time"
-)
-
-const (
-	minionConnIdleTimeoutSecs = 600
-	minionConnMaxLifetimeSecs = 600
-	minionDialTimeoutSecs     = 3
-	minionRequestTimeout      = 5
 )
 
 // MinionManager manages a single minion
-// It takes care of the connection pool, and executing the gRPC operations on the minion it manages
+// It uses a MinionClient to execute gRPC operations on the minion
+// It uses a MinionWatcher to watch for the health and completion state of a minion once the minion is prepared
 // It is thread safe
 type MinionManager struct {
-	mut  sync.Mutex // Must be taken for all operations on the MinionManager
-	addr string
-	pool *grpcpool.Pool
+	mut     sync.Mutex // Must be taken for all operations on the MinionManager
+	addr    string
+	client  *MinionClient
+	watcher *MinionWatcher
 }
 
 func NewMinionManager(addr string) (*MinionManager, error) {
-	// Factory method for pool
-	var factory grpcpool.Factory = func() (*grpc.ClientConn, error) {
-		log.Infof("grpcpool.Factory(): Trying to connect to minion %s", addr)
-		dialCtx, dialCancel := context.WithTimeout(context.Background(), minionDialTimeoutSecs*time.Second)
-		defer dialCancel()
-		conn, err := grpc.DialContext(dialCtx, addr, grpc.WithInsecure(), grpc.WithBlock())
-		if err != nil {
-			log.Errorf("grpcpool.Factory(): Failed to connect to minion %s (%s)", addr, err.Error())
-			return nil, err
-		}
-		log.Infof("grpcpool.Factory(): Successfully connected to %s", addr)
-		return conn, nil
-	}
-
-	// Create an empty connection pool (don't try to establish connection right now as minion may not be ready)
-	pool, err := grpcpool.New(factory, 0, 1, minionConnIdleTimeoutSecs*time.Second, minionConnMaxLifetimeSecs*time.Second)
+	client, err := NewMinionClient(addr)
 	if err != nil {
-		log.Errorf("Failed to create pool for minion %s (%s)", addr, err.Error())
+		log.Errorf("Failed to create client for minion %s (%s)", addr, err.Error())
 		return nil, err
 	}
-
 	return &MinionManager{
-		addr: addr,
-		pool: pool,
+		addr:   addr,
+		client: client,
 	}, nil
 }
 
 func (m *MinionManager) Close() {
 	m.mut.Lock()
 	defer m.mut.Unlock()
-
-	if m.pool != nil {
-		m.pool.Close()
-		m.pool = nil
-	}
+	m.client.Close()
 }
 
 func (m *MinionManager) GetAddr() string {
@@ -72,26 +44,7 @@ func (m *MinionManager) GetAddr() string {
 }
 
 func (m *MinionManager) GetMinionStatus(ctx context.Context, ch chan *proto.MinionInfo) {
-	minionConnection, err := m.getConnectionForMinion(ctx)
-	if err != nil {
-		reason := fmt.Sprintf("failed to get client for minion %s (%s)", m.addr, err.Error())
-		log.Errorf("getMinionStatus(): %s", reason)
-		ch <- &proto.MinionInfo{
-			Addr: m.addr,
-			Reachability: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: reason,
-			},
-		}
-		return
-	}
-	defer minionConnection.Close()
-	minionClient := proto.NewMinionClient(minionConnection)
-
-	// Ping Minion
-	pingCtx, pingCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	defer pingCtxCancel()
-	res, err := minionClient.Ping(pingCtx, &proto.MinionPingRequest{})
+	res, err := m.client.Ping(ctx)
 	if err != nil {
 		reason := fmt.Sprintf("gRPC request to %s failed (%v)", m.addr, err)
 		log.Errorf("getMinionStatus(): %s", reason)
@@ -121,32 +74,7 @@ func (m *MinionManager) GetMinionStatus(ctx context.Context, ch chan *proto.Mini
 func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId, jobDesc string,
 	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec, ch chan *proto.MinionStatus) {
 
-	minionConnection, err := m.getConnectionForMinion(ctx)
-	if err != nil {
-		ch <- &proto.MinionStatus{
-			Addr: m.addr,
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: fmt.Sprintf("failed to get client: %s", err.Error()),
-			},
-		}
-		return
-	}
-	defer minionConnection.Close()
-
-	minionClient := proto.NewMinionClient(minionConnection)
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	res, err := minionClient.PrepareJob(grpcCtx, &proto.MinionPrepareJobRequest{
-		JobId:   jobId,
-		JobDesc: jobDesc,
-		JobSpec: &proto.JobSpec{
-			DataSpec:     dataSpec,
-			DbSpec:       dbSpec,
-			WorkloadSpec: wlSpec,
-		},
-	})
-	grpcCtxCancel()
-
+	res, err := m.client.PrepareJob(ctx, jobId, jobDesc, dataSpec, dbSpec, wlSpec)
 	if err != nil {
 		ch <- &proto.MinionStatus{
 			Addr: m.addr,
@@ -169,6 +97,7 @@ func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId, jobDesc s
 		return
 	}
 
+	m.startWatchingMinion(res.GetPid(), res.GetJobId())
 	log.Infof("Successfully prepared minion %s", m.addr)
 	ch <- &proto.MinionStatus{
 		Addr: m.addr,
@@ -179,25 +108,26 @@ func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId, jobDesc s
 	return
 }
 
+func (m *MinionManager) startWatchingMinion(pid, jobId string) {
+	if m.watcher != nil {
+		m.watcher.StopWatching()
+	}
+	m.watcher = NewMinionWatcher(m.addr, m.client, pid, jobId)
+	m.watcher.StartWatching()
+}
+
 func (m *MinionManager) RunJobOnMinion(ctx context.Context, ch chan *proto.MinionStatus) {
-	minionConnection, err := m.getConnectionForMinion(ctx)
-	if err != nil {
+	if m.watcher.HasFailed() {
 		ch <- &proto.MinionStatus{
 			Addr: m.addr,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: fmt.Sprintf("failed to get client: %s", err.Error()),
+				FailureReason: fmt.Sprintf("minion %s failed since it was prepared", m.addr),
 			},
 		}
-		return
 	}
-	defer minionConnection.Close()
 
-	minionClient := proto.NewMinionClient(minionConnection)
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	res, err := minionClient.RunJob(grpcCtx, &proto.MinionRunJobRequest{})
-	grpcCtxCancel()
-
+	res, err := m.client.RunJob(ctx)
 	if err != nil {
 		ch <- &proto.MinionStatus{
 			Addr: m.addr,
@@ -231,25 +161,7 @@ func (m *MinionManager) RunJobOnMinion(ctx context.Context, ch chan *proto.Minio
 }
 
 func (m *MinionManager) StopJobOnMinion(ctx context.Context, ch chan *proto.MinionStatus) {
-	minionConnection, err := m.getConnectionForMinion(ctx)
-	if err != nil {
-		ch <- &proto.MinionStatus{
-			Addr: m.addr,
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: fmt.Sprintf("failed to get client: %s", err.Error()),
-			},
-		}
-		return
-	}
-	defer minionConnection.Close()
-
-	minionClient := proto.NewMinionClient(minionConnection)
-
-	// Stop workload
-	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	stopWorkloadResponse, err := minionClient.StopJob(grpcCtx, &proto.MinionStopJobRequest{})
-	grpcCtxCancel()
+	res, err := m.client.StopJob(ctx)
 
 	if err != nil {
 		ch <- &proto.MinionStatus{
@@ -262,12 +174,12 @@ func (m *MinionManager) StopJobOnMinion(ctx context.Context, ch chan *proto.Mini
 		return
 	}
 
-	if stopWorkloadResponse.GetStatus().GetIsOk() != true {
+	if res.GetStatus().GetIsOk() != true {
 		ch <- &proto.MinionStatus{
 			Addr: m.addr,
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: stopWorkloadResponse.GetStatus().GetFailureReason(),
+				FailureReason: res.GetStatus().GetFailureReason(),
 			},
 		}
 		return
@@ -281,17 +193,4 @@ func (m *MinionManager) StopJobOnMinion(ctx context.Context, ch chan *proto.Mini
 		},
 	}
 	return
-}
-
-func (m *MinionManager) getConnectionForMinion(ctx context.Context) (*grpcpool.ClientConn, error) {
-	if m.pool == nil {
-		return nil, fmt.Errorf("no pool for minion: %s", m.addr)
-	}
-
-	conn, err := m.pool.Get(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get connection for minion: %s (%s)", m.addr, err.Error())
-	}
-
-	return conn, nil
 }

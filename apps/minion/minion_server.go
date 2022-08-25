@@ -179,6 +179,7 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 				IsOk:          false,
 				FailureReason: err.Error(),
 			},
+			Pid: s.pid,
 		}, nil
 	}
 
@@ -189,6 +190,8 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 			IsOk:          true,
 			FailureReason: "",
 		},
+		Pid:   s.pid,
+		JobId: s.jobTracker.CurrentJob().Id(),
 	}, nil
 }
 
@@ -204,6 +207,7 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 				IsOk:          false,
 				FailureReason: err.Error(),
 			},
+			Pid: s.pid,
 		}, nil
 	}
 
@@ -214,6 +218,8 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 			IsOk:          true,
 			FailureReason: "",
 		},
+		Pid:   s.pid,
+		JobId: s.jobTracker.CurrentJob().Id(),
 	}, nil
 }
 
@@ -229,15 +235,18 @@ func (s *MinionServer) StopJob(ctx context.Context, in *proto.MinionStopJobReque
 				IsOk:          false,
 				FailureReason: err.Error(),
 			},
+			Pid: s.pid,
 		}, nil
 	}
 
-	// Run was successful
+	// Stop was successful
 	log.Infof("GRPC: StopJob() completed successfully")
 	return &proto.MinionStopJobResponse{
 		Status: &proto.GeneralStatus{
 			IsOk:          true,
 			FailureReason: "",
 		},
+		Pid:   s.pid,
+		JobId: s.jobTracker.CurrentJob().Id(),
 	}, nil
 }
