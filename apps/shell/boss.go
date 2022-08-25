@@ -66,6 +66,19 @@ func init() {
 	}
 	bossCmd.AddCommand(bossMinionShowCmd)
 
+	bossMinionWaitCmd := &grumble.Command{
+		Name: "wait-for-minions",
+		Help: "wait until boss reports a desired number of live minions",
+		Flags: func(f *grumble.Flags) {
+			f.Duration("t", "timeout", 10*time.Second, "wait timeout")
+		},
+		Args: func(a *grumble.Args) {
+			a.Int("num-minions", "number of minions to wait for")
+		},
+		Run: bossWaitForMinions,
+	}
+	bossCmd.AddCommand(bossMinionWaitCmd)
+
 	bossPrepareJobCmd := &grumble.Command{
 		Name: "prepare-job",
 		Help: "Prepare to run a job",
@@ -282,6 +295,46 @@ func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
 	c.App.Printf("[version=%s, pid=%s, uptime=%s, jobId=%s, jobState=%s]\n",
 		mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
 		mi.GetProcessInfo().GetUptime(), jobId, jobState)
+}
+
+func bossWaitForMinions(c *grumble.Context) error {
+	bossAddr := c.Flags.String("boss")
+	bossClient, err := getBossClient(bossAddr)
+	if err != nil {
+		return err
+	}
+
+	desiredMinions := c.Args.Int("num-minions")
+	timeout := c.Flags.Duration("timeout")
+
+	c.App.Printf("Waiting till boss has %d live minions. Wait timeout=%s\n", desiredMinions, timeout.String())
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	for {
+		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
+		res, err := bossClient.ShowMinions(grpcCtx, &proto.BossShowMinionRequest{})
+		grpcCancel()
+		if err != nil {
+			c.App.Printf("Request to boss failed (%s)\n", err.Error())
+		} else {
+			count := 0
+			for _, mi := range res.GetMinionInfos() {
+				if mi.GetReachability().GetIsOk() {
+					count++
+				}
+			}
+			if count >= desiredMinions {
+				c.App.Printf("Boss is reporting %d live minions\n", count)
+				break
+			}
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("timeout occurred. desired number of minions not found")
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return nil
 }
 
 func bossPrepareJob(c *grumble.Context) error {
