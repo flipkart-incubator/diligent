@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	"github.com/flipkart-incubator/diligent/pkg/datagen"
 	"github.com/flipkart-incubator/diligent/pkg/idgen"
@@ -23,18 +22,6 @@ import (
 const (
 	bossConnectionTimoutSecs = 5
 	bossRequestTimeoutSecs   = 5
-)
-
-type JobState int
-
-const (
-	Undefined JobState = iota
-	Prepared
-	Running
-	EndedSuccess
-	EndedFailure
-	EndedStopped
-	EndedNeverRan
 )
 
 type DataContext struct {
@@ -58,20 +45,11 @@ type WorkloadContext struct {
 	workload      *work.Workload
 }
 
-type JobInfo struct {
-	jobId       string
-	jobSpec     *proto.JobSpec
-	jobState    JobState
-	prepareTime time.Time
-	runTime     time.Time
-	endTime     time.Time
-}
-
 // MinionServer represents a diligent minion gRPC server and associated state
 // It is thread safe
 type MinionServer struct {
 	proto.UnimplementedMinionServer
-	mut *sync.Mutex //mut Is used to coordinate access to this struct
+	mut sync.Mutex // Must be taken for all operations on the MinionServer
 
 	grpcAddr      string
 	metricsAddr   string
@@ -81,18 +59,16 @@ type MinionServer struct {
 	pid       string    //pid is a string that represents a unique run of the minion server
 	startTime time.Time //startTime is when this server started executing
 
-	currentJobInfo *JobInfo
-	data           *DataContext
-	db             *DBContext
-	workload       *WorkloadContext
+	jobTracker *JobTracker
+	data       *DataContext
+	db         *DBContext
+	workload   *WorkloadContext
 
 	metrics *metrics.DiligentMetrics
 }
 
 func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *MinionServer {
 	return &MinionServer{
-		mut: &sync.Mutex{},
-
 		grpcAddr:      grpcAddr,
 		metricsAddr:   metricsAddr,
 		advertiseAddr: advertiseAddr,
@@ -101,7 +77,7 @@ func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *Min
 		pid:       idgen.GenerateId16(),
 		startTime: time.Now(),
 
-		currentJobInfo: nil,
+		jobTracker: NewJobTracker(),
 
 		data:     nil,
 		db:       nil,
@@ -174,19 +150,6 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 	defer s.mut.Unlock()
 
 	log.Infof("GRPC: Ping completed successfully")
-	var jobInfo *proto.JobInfo
-	if s.currentJobInfo == nil {
-		jobInfo = nil
-	} else {
-		jobInfo = &proto.JobInfo{
-			JobId:       s.currentJobInfo.jobId,
-			JobSpec:     s.currentJobInfo.jobSpec,
-			JobState:    s.currentJobStateToProto(),
-			PrepareTime: s.currentJobInfo.prepareTime.Format(time.UnixDate),
-			RunTime:     s.currentJobInfo.runTime.Format(time.UnixDate),
-			EndTime:     s.currentJobInfo.endTime.Format(time.UnixDate),
-		}
-	}
 	return &proto.MinionPingResponse{
 		BuildInfo: &proto.BuildInfo{
 			AppName:    buildinfo.AppName,
@@ -200,7 +163,7 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 			StartTime: s.startTime.Format(time.UnixDate),
 			Uptime:    time.Since(s.startTime).String(),
 		},
-		JobInfo: jobInfo,
+		JobInfo: s.jobTracker.CurrentJobInfo().ToProto(),
 	}, nil
 }
 
@@ -209,59 +172,8 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	// Reject if minion is running a job currently
-	if s.currentJobInfo != nil && s.currentJobInfo.jobState == Running {
-		log.Infof("PrepareJob(): Cannot prepare. Minion is currently running job %s", s.currentJobInfo.jobId)
-		return &proto.MinionPrepareJobResponse{
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: "minion is running job " + s.currentJobInfo.jobId,
-			},
-		}, nil
-	}
-
-	// Clean up earlier state if minion was already in prepared state
-	if s.currentJobInfo != nil && s.currentJobInfo.jobState == Prepared {
-		log.Infof("PrepareJob(): Minion was prepared for job %s. Cleaning up previous state", s.currentJobInfo.jobId)
-		s.currentJobInfo.jobState = EndedNeverRan
-		s.currentJobInfo.endTime = time.Now()
-		s.currentJobInfo = nil
-		s.data = nil
-		if s.db != nil {
-			s.db.db.Close()
-			s.db = nil
-		}
-		s.workload = nil
-	}
-
-	// Load the dataspec
-	err := s.loadDataSpec(ctx, in.GetJobSpec().GetDataSpec())
+	err := s.jobTracker.Prepare(ctx, in.GetJobId(), in.GetJobSpec(), s.metrics)
 	if err != nil {
-		log.Errorf("GRPC: PrepareJob(jobId=%s) Failed: %s", in.GetJobId(), err.Error())
-		return &proto.MinionPrepareJobResponse{
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: err.Error(),
-			},
-		}, nil
-	}
-
-	// Open connection with DB
-	err = s.openDBConnection(ctx, in.GetJobSpec().GetDbSpec())
-	if err != nil {
-		log.Errorf("GRPC: PrepareJob(jobId=%s) Failed: %s", in.GetJobId(), err.Error())
-		return &proto.MinionPrepareJobResponse{
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: err.Error(),
-			},
-		}, nil
-	}
-
-	// Prepare workload
-	err = s.prepareWorkload(ctx, in.GetJobSpec().GetWorkloadSpec())
-	if err != nil {
-		log.Errorf("GRPC: PrepareJob(jobId=%s) Failed: %s", in.GetJobId(), err.Error())
 		return &proto.MinionPrepareJobResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
@@ -271,12 +183,6 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 	}
 
 	// Preparation was successful
-	s.currentJobInfo = &JobInfo{
-		jobId:       in.GetJobId(),
-		jobSpec:     in.GetJobSpec(),
-		jobState:    Prepared,
-		prepareTime: time.Now(),
-	}
 	log.Infof("GRPC: PrepareJob(jobId=%s) completed successfully", in.GetJobId())
 	return &proto.MinionPrepareJobResponse{
 		Status: &proto.GeneralStatus{
@@ -291,32 +197,17 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	// Process only if minion is prepared
-	if s.currentJobInfo == nil || s.currentJobInfo.jobState != Prepared {
+	err := s.jobTracker.Run(ctx)
+	if err != nil {
 		return &proto.MinionRunJobResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: "no current job in prepared state",
+				FailureReason: err.Error(),
 			},
 		}, nil
 	}
 
-	go func() {
-		s.mut.Lock()
-		s.mut.Unlock()
-		log.Infof("Starting workload...")
-		s.workload.workload.Start(time.Duration(s.workload.durationSec) * time.Second)
-		log.Infof("Waiting for workload to complete...")
-		s.workload.workload.WaitForCompletion()
-		log.Infof("Workload completed. Marking current job as ended successfully")
-		s.mut.Lock()
-		s.currentJobInfo.jobState = EndedSuccess
-		s.currentJobInfo.endTime = time.Now()
-		s.mut.Unlock()
-	}()
-
-	s.currentJobInfo.jobState = Running
-	s.currentJobInfo.runTime = time.Now()
+	// Run was successful
 	log.Infof("GRPC: RunJob() completed successfully")
 	return &proto.MinionRunJobResponse{
 		Status: &proto.GeneralStatus{
@@ -326,228 +217,27 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 	}, nil
 }
 
-func (s *MinionServer) StopJob(_ context.Context, in *proto.MinionStopJobRequest) (*proto.MinionStopJobResponse, error) {
+func (s *MinionServer) StopJob(ctx context.Context, in *proto.MinionStopJobRequest) (*proto.MinionStopJobResponse, error) {
 	log.Infof("GRPC: StopJob()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	// Process only if minion is running a job and id matches
-	if s.currentJobInfo == nil || s.currentJobInfo.jobState != Running {
+	err := s.jobTracker.Stop(ctx)
+	if err != nil {
 		return &proto.MinionStopJobResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: "no current job in running state",
+				FailureReason: err.Error(),
 			},
 		}, nil
 	}
 
-	if s.workload.workload.IsRunning() {
-		s.workload.workload.Cancel()
-		s.workload.workload.WaitForCompletion()
-		s.currentJobInfo.jobState = EndedStopped
-		s.currentJobInfo.endTime = time.Now()
-	}
-
-	log.Infof("Stopped job successfully")
+	// Run was successful
+	log.Infof("GRPC: StopJob() completed successfully")
 	return &proto.MinionStopJobResponse{
 		Status: &proto.GeneralStatus{
-			IsOk: true,
+			IsOk:          true,
+			FailureReason: "",
 		},
 	}, nil
-}
-
-//func (s *MinionServer) GetCurrentJobInfo(_ context.Context, in *proto.MinionGetCurrentJobInfoRequest) (*proto.MinionGetCurrentJobInfoResponse, error) {
-//	log.Infof("GRPC: GetCurrentJobInfo()")
-//	s.mut.Lock()
-//	defer s.mut.Unlock()
-//
-//	if s.currentJobInfo == nil {
-//		return &proto.MinionGetCurrentJobInfoResponse{
-//			Status: &proto.GeneralStatus{
-//				IsOk:          false,
-//				FailureReason: "no current job",
-//			},
-//		}, nil
-//	}
-//
-//	return &proto.MinionGetCurrentJobInfoResponse{
-//		Status: &proto.GeneralStatus{
-//			IsOk: true,
-//		},
-//		JobInfo: &proto.JobInfo{
-//			JobId:       s.currentJobInfo.jobId,
-//			JobSpec:     s.currentJobInfo.jobSpec,
-//			PrepareTime: s.currentJobInfo.prepareTime.Format(time.UnixDate),
-//			RunTime:     s.currentJobInfo.prepareTime.Format(time.UnixDate),
-//			EndTime:     s.currentJobInfo.prepareTime.Format(time.UnixDate),
-//		},
-//	}, nil
-//}
-
-func (s *MinionServer) loadDataSpec(ctx context.Context, protoDs *proto.DataSpec) error {
-	log.Infof("Loading dataspec...")
-	dataSpec := proto.DataSpecFromProto(protoDs)
-	s.data = &DataContext{
-		dataSpec: dataSpec,
-		dataGen:  datagen.NewDataGen(dataSpec),
-	}
-	log.Infof("Data spec loaded successfully")
-	return nil
-}
-
-func (s *MinionServer) openDBConnection(_ context.Context, protoDBSpec *proto.DBSpec) error {
-	log.Infof("Opening DB connection...")
-	// Validate driver
-	driver := protoDBSpec.GetDriver()
-	switch driver {
-	case "mysql", "pgx":
-	default:
-		return fmt.Errorf("invalid driver: '%s'. Allowed values are 'mysql', 'pgx'", driver)
-	}
-
-	// Validate URL
-	url := protoDBSpec.GetUrl()
-	if url == "" {
-		return fmt.Errorf("please specify the connection url")
-	}
-
-	// Close any existing connection
-	if s.db != nil {
-		s.db.db.Close()
-		s.db = nil
-	}
-
-	// Open new connection
-	db, err := sql.Open(driver, url)
-	if err != nil {
-		return err
-	}
-
-	err = work.ConnCheck(db)
-	if err != nil {
-		return err
-	}
-
-	s.db = &DBContext{
-		driver: driver,
-		url:    url,
-		db:     db,
-	}
-	log.Infof("DB Connection successful (driver=%s, url=%s)", driver, url)
-	return nil
-}
-
-func (s *MinionServer) prepareWorkload(_ context.Context, protoWl *proto.WorkloadSpec) error {
-	log.Infof("Preparing workload...")
-
-	durationSec := int(protoWl.GetDurationSec())
-	if durationSec < 0 {
-		return fmt.Errorf("invalid duration %d. Must be >= 0", durationSec)
-	}
-
-	batchSize := int(protoWl.GetBatchSize())
-	if batchSize < 1 {
-		return fmt.Errorf("invalid batch size %d. Must be >= 1", batchSize)
-	}
-
-	concurrency := int(protoWl.GetConcurrency())
-	if concurrency < 1 {
-		return fmt.Errorf("invalid concurrency %d. Must be >= 1", concurrency)
-	}
-
-	table := protoWl.GetTableName()
-	if table == "" {
-		return fmt.Errorf("table name is missing")
-	}
-
-	inputRange := protoWl.GetAssignedRange()
-	if inputRange == nil {
-		return fmt.Errorf("assigned range is missing")
-	}
-
-	totalRows := s.data.dataSpec.KeyGenSpec.NumKeys()
-	rangeStart := int(inputRange.GetStart())
-	rangeLimit := int(inputRange.GetLimit())
-	if rangeStart < 0 || rangeLimit < rangeStart {
-		return fmt.Errorf("invalid range [%d, %d)", rangeStart, rangeLimit)
-	}
-	if rangeStart >= totalRows {
-		return fmt.Errorf("invalid range [%d, %d)", rangeStart, rangeLimit)
-	}
-	if rangeLimit > totalRows {
-		return fmt.Errorf("invalid range [%d, %d)", rangeStart, rangeLimit)
-	}
-	assignedRange := proto.RangeFromProto(inputRange)
-
-	// Configure the db connections to maintain the specified concurrency
-	s.db.db.SetMaxOpenConns(concurrency)
-	s.db.db.SetMaxIdleConns(concurrency)
-
-	rp := &work.RunParams{
-		DB:          s.db.db,
-		DataGen:     s.data.dataGen,
-		Metrics:     s.metrics,
-		Table:       table,
-		Concurrency: concurrency,
-		BatchSize:   batchSize,
-		DurationSec: durationSec,
-	}
-
-	workloadName := protoWl.GetWorkloadName()
-	var workload *work.Workload
-	switch workloadName {
-	case "insert":
-		workload = work.NewInsertRowWorkload(assignedRange, rp)
-	case "insert-txn":
-		workload = work.NewInsertTxnWorkload(assignedRange, rp)
-	case "select-pk":
-		workload = work.NewSelectByPkRowWorkload(assignedRange, rp)
-	case "select-pk-txn":
-		workload = work.NewSelectByPkTxnWorkload(assignedRange, rp)
-	case "select-uk":
-		workload = work.NewSelectByUkRowWorkload(assignedRange, rp)
-	case "select-uk-txn":
-		workload = work.NewSelectByUkTxnWorkload(assignedRange, rp)
-	case "update":
-		workload = work.NewUpdateRowWorkload(assignedRange, rp)
-	case "update-txn":
-		workload = work.NewUpdateTxnWorkload(assignedRange, rp)
-	case "delete":
-		workload = work.NewDeleteRowWorkload(assignedRange, rp)
-	case "delete-txn":
-		workload = work.NewDeleteTxnWorkload(assignedRange, rp)
-	default:
-		return fmt.Errorf("invalid workload '%s'", workloadName)
-	}
-
-	s.workload = &WorkloadContext{
-		workloadName:  workloadName,
-		assignedRange: assignedRange,
-		tableName:     table,
-		durationSec:   durationSec,
-		concurrency:   concurrency,
-		batchSize:     batchSize,
-		workload:      workload,
-	}
-
-	log.Infof("Workload prepared successfully")
-	return nil
-}
-
-func (s *MinionServer) currentJobStateToProto() proto.JobState {
-	switch s.currentJobInfo.jobState {
-	case Prepared:
-		return proto.JobState_PREPARED
-	case Running:
-		return proto.JobState_RUNNING
-	case EndedSuccess:
-		return proto.JobState_ENDED_SUCCESS
-	case EndedFailure:
-		return proto.JobState_ENDED_FAILURE
-	case EndedStopped:
-		return proto.JobState_ENDED_STOPPED
-	case EndedNeverRan:
-		return proto.JobState_ENDED_NEVER_RAN
-	}
-	return proto.JobState_UNDEFINED
 }
