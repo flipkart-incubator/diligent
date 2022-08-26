@@ -94,7 +94,7 @@ enum JobState {
     RUNNING = 2;
     ENDED_SUCCESS = 3;
     ENDED_FAILURE = 4;
-    ENDED_STOPPED = 5;
+    ENDED_ABORTED = 5;
     ENDED_NEVER_RAN = 6;
 }
 

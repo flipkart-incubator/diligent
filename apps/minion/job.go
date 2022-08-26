@@ -21,7 +21,7 @@ const (
 	Running
 	EndedSuccess
 	EndedFailure
-	EndedStopped
+	EndedAborted
 	EndedNeverRan
 )
 
@@ -35,8 +35,8 @@ func (j JobState) String() string {
 		return "EndedSuccess"
 	case EndedFailure:
 		return "EndedFailure"
-	case EndedStopped:
-		return "EndedStopped"
+	case EndedAborted:
+		return "EndedAborted"
 	case EndedNeverRan:
 		return "EndedNeverRan"
 	}
@@ -53,8 +53,8 @@ func (j JobState) ToProto() proto.JobState {
 		return proto.JobState_ENDED_SUCCESS
 	case EndedFailure:
 		return proto.JobState_ENDED_FAILURE
-	case EndedStopped:
-		return proto.JobState_ENDED_STOPPED
+	case EndedAborted:
+		return proto.JobState_ENDED_ABORTED
 	case EndedNeverRan:
 		return proto.JobState_ENDED_NEVER_RAN
 	}
@@ -189,8 +189,8 @@ func (j *Job) Run(ctx context.Context) error {
 	return nil
 }
 
-func (j *Job) Stop(ctx context.Context) error {
-	log.Infof("Stop(%s)", j.id)
+func (j *Job) Abort(ctx context.Context) error {
+	log.Infof("Abort(%s)", j.id)
 	j.mut.Lock()
 	defer j.mut.Unlock()
 
@@ -204,7 +204,7 @@ func (j *Job) Stop(ctx context.Context) error {
 			j.workload.workload.Cancel()
 			j.workload.workload.WaitForCompletion()
 		}
-		j.state = EndedStopped
+		j.state = EndedAborted
 		j.endTime = time.Now()
 	}
 
@@ -215,7 +215,7 @@ func (j *Job) Stop(ctx context.Context) error {
 	}
 	j.workload = nil
 
-	log.Infof("Stop(%s) completed successfully", j.id)
+	log.Infof("Abort(%s) completed successfully", j.id)
 	return nil
 }
 

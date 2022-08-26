@@ -223,14 +223,14 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 	}, nil
 }
 
-func (s *MinionServer) StopJob(ctx context.Context, in *proto.MinionStopJobRequest) (*proto.MinionStopJobResponse, error) {
-	log.Infof("GRPC: StopJob()")
+func (s *MinionServer) AbortJob(ctx context.Context, in *proto.MinionAbortJobRequest) (*proto.MinionAbortJobResponse, error) {
+	log.Infof("GRPC: AbortJob()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	err := s.jobTracker.Stop(ctx)
+	err := s.jobTracker.Abort(ctx)
 	if err != nil {
-		return &proto.MinionStopJobResponse{
+		return &proto.MinionAbortJobResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: err.Error(),
@@ -239,9 +239,9 @@ func (s *MinionServer) StopJob(ctx context.Context, in *proto.MinionStopJobReque
 		}, nil
 	}
 
-	// Stop was successful
-	log.Infof("GRPC: StopJob() completed successfully")
-	return &proto.MinionStopJobResponse{
+	// Abort was successful
+	log.Infof("GRPC: AbortJob() completed successfully")
+	return &proto.MinionAbortJobResponse{
 		Status: &proto.GeneralStatus{
 			IsOk:          true,
 			FailureReason: "",

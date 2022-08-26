@@ -160,8 +160,8 @@ func (m *MinionManager) RunJobOnMinion(ctx context.Context, ch chan *proto.Minio
 	return
 }
 
-func (m *MinionManager) StopJobOnMinion(ctx context.Context, ch chan *proto.MinionStatus) {
-	res, err := m.client.StopJob(ctx)
+func (m *MinionManager) AbortJobOnMinion(ctx context.Context, ch chan *proto.MinionStatus) {
+	res, err := m.client.AbortJob(ctx)
 
 	if err != nil {
 		ch <- &proto.MinionStatus{
@@ -185,7 +185,7 @@ func (m *MinionManager) StopJobOnMinion(ctx context.Context, ch chan *proto.Mini
 		return
 	}
 
-	log.Infof("Successfully triggered stop on minion %s", m.addr)
+	log.Infof("Successfully triggered abort on minion %s", m.addr)
 	ch <- &proto.MinionStatus{
 		Addr: m.addr,
 		Status: &proto.GeneralStatus{

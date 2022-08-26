@@ -277,8 +277,8 @@ func (s *BossServer) RunJob(ctx context.Context, in *proto.BossRunJobRequest) (*
 	}, nil
 }
 
-func (s *BossServer) StopJob(ctx context.Context, in *proto.BossStopJobRequest) (*proto.BossStopJobResponse, error) {
-	log.Infof("GRPC: StopJob()")
+func (s *BossServer) AbortJob(ctx context.Context, in *proto.BossAbortJobRequest) (*proto.BossAbortJobResponse, error) {
+	log.Infof("GRPC: AbortJob()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -286,8 +286,8 @@ func (s *BossServer) StopJob(ctx context.Context, in *proto.BossStopJobRequest) 
 	ch := make(chan *proto.MinionStatus)
 
 	for _, mm := range s.registry.GetMinionManagers() {
-		log.Infof("StopJob(): Stopping on Minion %s", mm.GetAddr())
-		go mm.StopJobOnMinion(ctx, ch)
+		log.Infof("AbortJob(): Aborting on Minion %s", mm.GetAddr())
+		go mm.AbortJobOnMinion(ctx, ch)
 	}
 
 	// Collect execution results
@@ -307,8 +307,8 @@ func (s *BossServer) StopJob(ctx context.Context, in *proto.BossStopJobRequest) 
 		}
 	}
 
-	log.Infof("StopJob(): completed")
-	return &proto.BossStopJobResponse{
+	log.Infof("AbortJob(): completed")
+	return &proto.BossAbortJobResponse{
 		Status:         &overallStatus,
 		MinionStatuses: minionStatuses,
 	}, nil

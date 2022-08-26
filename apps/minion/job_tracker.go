@@ -41,9 +41,9 @@ func (t *JobTracker) Prepare(ctx context.Context, id string, spec *proto.JobSpec
 	defer t.mut.Unlock()
 
 	if t.currentJob != nil {
-		err := t.currentJob.Stop(ctx)
+		err := t.currentJob.Abort(ctx)
 		if err != nil {
-			panic(fmt.Errorf("failed to stop current job %s", err.Error()))
+			panic(fmt.Errorf("failed to abort current job %s", err.Error()))
 		}
 	}
 
@@ -66,13 +66,13 @@ func (t *JobTracker) Run(ctx context.Context) error {
 	return err
 }
 
-func (t *JobTracker) Stop(ctx context.Context) error {
+func (t *JobTracker) Abort(ctx context.Context) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 
 	if t.currentJob == nil {
 		return fmt.Errorf("no current job")
 	}
-	err := t.currentJob.Stop(ctx)
+	err := t.currentJob.Abort(ctx)
 	return err
 }

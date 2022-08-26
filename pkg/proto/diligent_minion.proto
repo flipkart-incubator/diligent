@@ -12,7 +12,7 @@ service Minion {
   // Job Control
   rpc PrepareJob (MinionPrepareJobRequest) returns (MinionPrepareJobResponse);
   rpc RunJob (MinionRunJobRequest) returns (MinionRunJobResponse);
-  rpc StopJob (MinionStopJobRequest) returns (MinionStopJobResponse);
+  rpc AbortJob (MinionAbortJobRequest) returns (MinionAbortJobResponse);
 }
 
 message MinionPingRequest {
@@ -45,10 +45,10 @@ message MinionRunJobResponse {
   string job_id = 3;
 }
 
-message MinionStopJobRequest {
+message MinionAbortJobRequest {
 }
 
-message MinionStopJobResponse {
+message MinionAbortJobResponse {
   GeneralStatus status = 1;
   string pid = 2;
   string job_id = 3;

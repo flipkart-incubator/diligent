@@ -81,12 +81,12 @@ func (m *MinionClient) Ping(ctx context.Context) (*proto.MinionPingResponse, err
 		return nil, err
 	}
 	defer minionConnection.Close()
-	minionClient := proto.NewMinionClient(minionConnection)
+	grpcClient := proto.NewMinionClient(minionConnection)
 
 	// Ping Minion
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	defer grpcCtxCancel()
-	res, err := minionClient.Ping(grpcCtx, &proto.MinionPingRequest{})
+	res, err := grpcClient.Ping(grpcCtx, &proto.MinionPingRequest{})
 	if err != nil {
 		e := fmt.Errorf("gRPC request to %s failed (%v)", m.addr, err)
 		log.Errorf("getMinionStatus(): %s", e.Error())
@@ -108,10 +108,10 @@ func (m *MinionClient) PrepareJob(ctx context.Context, jobId, jobDesc string,
 		return nil, err
 	}
 	defer minionConnection.Close()
-	minionClient := proto.NewMinionClient(minionConnection)
+	grpcClient := proto.NewMinionClient(minionConnection)
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	res, err := minionClient.PrepareJob(grpcCtx, &proto.MinionPrepareJobRequest{
+	res, err := grpcClient.PrepareJob(grpcCtx, &proto.MinionPrepareJobRequest{
 		JobId:   jobId,
 		JobDesc: jobDesc,
 		JobSpec: &proto.JobSpec{
@@ -137,10 +137,10 @@ func (m *MinionClient) RunJob(ctx context.Context) (*proto.MinionRunJobResponse,
 		return nil, err
 	}
 	defer minionConnection.Close()
-	minionClient := proto.NewMinionClient(minionConnection)
+	grpcClient := proto.NewMinionClient(minionConnection)
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	res, err := minionClient.RunJob(grpcCtx, &proto.MinionRunJobRequest{})
+	res, err := grpcClient.RunJob(grpcCtx, &proto.MinionRunJobRequest{})
 	grpcCtxCancel()
 	if err != nil {
 		return nil, err
@@ -148,20 +148,20 @@ func (m *MinionClient) RunJob(ctx context.Context) (*proto.MinionRunJobResponse,
 	return res, nil
 }
 
-func (m *MinionClient) StopJob(ctx context.Context) (*proto.MinionStopJobResponse, error) {
+func (m *MinionClient) AbortJob(ctx context.Context) (*proto.MinionAbortJobResponse, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
 	minionConnection, err := m.getConnectionForMinion(ctx)
 	if err != nil {
-		log.Errorf("StopJob(): %s", err.Error())
+		log.Errorf("AbortJob(): %s", err.Error())
 		return nil, err
 	}
 	defer minionConnection.Close()
-	minionClient := proto.NewMinionClient(minionConnection)
+	grpcClient := proto.NewMinionClient(minionConnection)
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	res, err := minionClient.StopJob(grpcCtx, &proto.MinionStopJobRequest{})
+	res, err := grpcClient.AbortJob(grpcCtx, &proto.MinionAbortJobRequest{})
 	grpcCtxCancel()
 	if err != nil {
 		return nil, err

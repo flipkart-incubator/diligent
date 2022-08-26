@@ -27,7 +27,7 @@ type MinionClient interface {
 	// Job Control
 	PrepareJob(ctx context.Context, in *MinionPrepareJobRequest, opts ...grpc.CallOption) (*MinionPrepareJobResponse, error)
 	RunJob(ctx context.Context, in *MinionRunJobRequest, opts ...grpc.CallOption) (*MinionRunJobResponse, error)
-	StopJob(ctx context.Context, in *MinionStopJobRequest, opts ...grpc.CallOption) (*MinionStopJobResponse, error)
+	AbortJob(ctx context.Context, in *MinionAbortJobRequest, opts ...grpc.CallOption) (*MinionAbortJobResponse, error)
 }
 
 type minionClient struct {
@@ -65,9 +65,9 @@ func (c *minionClient) RunJob(ctx context.Context, in *MinionRunJobRequest, opts
 	return out, nil
 }
 
-func (c *minionClient) StopJob(ctx context.Context, in *MinionStopJobRequest, opts ...grpc.CallOption) (*MinionStopJobResponse, error) {
-	out := new(MinionStopJobResponse)
-	err := c.cc.Invoke(ctx, "/proto.Minion/StopJob", in, out, opts...)
+func (c *minionClient) AbortJob(ctx context.Context, in *MinionAbortJobRequest, opts ...grpc.CallOption) (*MinionAbortJobResponse, error) {
+	out := new(MinionAbortJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Minion/AbortJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ type MinionServer interface {
 	// Job Control
 	PrepareJob(context.Context, *MinionPrepareJobRequest) (*MinionPrepareJobResponse, error)
 	RunJob(context.Context, *MinionRunJobRequest) (*MinionRunJobResponse, error)
-	StopJob(context.Context, *MinionStopJobRequest) (*MinionStopJobResponse, error)
+	AbortJob(context.Context, *MinionAbortJobRequest) (*MinionAbortJobResponse, error)
 	mustEmbedUnimplementedMinionServer()
 }
 
@@ -100,8 +100,8 @@ func (UnimplementedMinionServer) PrepareJob(context.Context, *MinionPrepareJobRe
 func (UnimplementedMinionServer) RunJob(context.Context, *MinionRunJobRequest) (*MinionRunJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunJob not implemented")
 }
-func (UnimplementedMinionServer) StopJob(context.Context, *MinionStopJobRequest) (*MinionStopJobResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopJob not implemented")
+func (UnimplementedMinionServer) AbortJob(context.Context, *MinionAbortJobRequest) (*MinionAbortJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AbortJob not implemented")
 }
 func (UnimplementedMinionServer) mustEmbedUnimplementedMinionServer() {}
 
@@ -170,20 +170,20 @@ func _Minion_RunJob_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Minion_StopJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MinionStopJobRequest)
+func _Minion_AbortJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MinionAbortJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MinionServer).StopJob(ctx, in)
+		return srv.(MinionServer).AbortJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Minion/StopJob",
+		FullMethod: "/proto.Minion/AbortJob",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinionServer).StopJob(ctx, req.(*MinionStopJobRequest))
+		return srv.(MinionServer).AbortJob(ctx, req.(*MinionAbortJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -208,8 +208,8 @@ var Minion_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Minion_RunJob_Handler,
 		},
 		{
-			MethodName: "StopJob",
-			Handler:    _Minion_StopJob_Handler,
+			MethodName: "AbortJob",
+			Handler:    _Minion_AbortJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

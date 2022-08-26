@@ -31,7 +31,7 @@ type BossClient interface {
 	// Job Control
 	PrepareJob(ctx context.Context, in *BossPrepareJobRequest, opts ...grpc.CallOption) (*BossPrepareJobResponse, error)
 	RunJob(ctx context.Context, in *BossRunJobRequest, opts ...grpc.CallOption) (*BossRunJobResponse, error)
-	StopJob(ctx context.Context, in *BossStopJobRequest, opts ...grpc.CallOption) (*BossStopJobResponse, error)
+	AbortJob(ctx context.Context, in *BossAbortJobRequest, opts ...grpc.CallOption) (*BossAbortJobResponse, error)
 }
 
 type bossClient struct {
@@ -96,9 +96,9 @@ func (c *bossClient) RunJob(ctx context.Context, in *BossRunJobRequest, opts ...
 	return out, nil
 }
 
-func (c *bossClient) StopJob(ctx context.Context, in *BossStopJobRequest, opts ...grpc.CallOption) (*BossStopJobResponse, error) {
-	out := new(BossStopJobResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/StopJob", in, out, opts...)
+func (c *bossClient) AbortJob(ctx context.Context, in *BossAbortJobRequest, opts ...grpc.CallOption) (*BossAbortJobResponse, error) {
+	out := new(BossAbortJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/AbortJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ type BossServer interface {
 	// Job Control
 	PrepareJob(context.Context, *BossPrepareJobRequest) (*BossPrepareJobResponse, error)
 	RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error)
-	StopJob(context.Context, *BossStopJobRequest) (*BossStopJobResponse, error)
+	AbortJob(context.Context, *BossAbortJobRequest) (*BossAbortJobResponse, error)
 	mustEmbedUnimplementedBossServer()
 }
 
@@ -144,8 +144,8 @@ func (UnimplementedBossServer) PrepareJob(context.Context, *BossPrepareJobReques
 func (UnimplementedBossServer) RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunJob not implemented")
 }
-func (UnimplementedBossServer) StopJob(context.Context, *BossStopJobRequest) (*BossStopJobResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopJob not implemented")
+func (UnimplementedBossServer) AbortJob(context.Context, *BossAbortJobRequest) (*BossAbortJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AbortJob not implemented")
 }
 func (UnimplementedBossServer) mustEmbedUnimplementedBossServer() {}
 
@@ -268,20 +268,20 @@ func _Boss_RunJob_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_StopJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BossStopJobRequest)
+func _Boss_AbortJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossAbortJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).StopJob(ctx, in)
+		return srv.(BossServer).AbortJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/StopJob",
+		FullMethod: "/proto.Boss/AbortJob",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).StopJob(ctx, req.(*BossStopJobRequest))
+		return srv.(BossServer).AbortJob(ctx, req.(*BossAbortJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -318,8 +318,8 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Boss_RunJob_Handler,
 		},
 		{
-			MethodName: "StopJob",
-			Handler:    _Boss_StopJob_Handler,
+			MethodName: "AbortJob",
+			Handler:    _Boss_AbortJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -106,12 +106,12 @@ func init() {
 	}
 	bossCmd.AddCommand(bossRunJobCmd)
 
-	bossStopJobCmd := &grumble.Command{
-		Name: "stop-job",
-		Help: "Stop the execution of the current job",
-		Run:  bossStopJob,
+	bossAbortJobCmd := &grumble.Command{
+		Name: "abort-job",
+		Help: "Abort the execution of the current job",
+		Run:  bossAbortJob,
 	}
-	bossCmd.AddCommand(bossStopJobCmd)
+	bossCmd.AddCommand(bossAbortJobCmd)
 }
 
 func bossPing(c *grumble.Context) error {
@@ -497,7 +497,7 @@ func bossRunJob(c *grumble.Context) error {
 	return nil
 }
 
-func bossStopJob(c *grumble.Context) error {
+func bossAbortJob(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -506,7 +506,7 @@ func bossStopJob(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.StopJob(grpcCtx, &proto.BossStopJobRequest{})
+	res, err := bossClient.AbortJob(grpcCtx, &proto.BossAbortJobRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {

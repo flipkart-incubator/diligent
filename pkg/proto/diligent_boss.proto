@@ -17,7 +17,7 @@ service Boss {
   // Job Control
   rpc PrepareJob (BossPrepareJobRequest) returns (BossPrepareJobResponse);
   rpc RunJob (BossRunJobRequest) returns (BossRunJobResponse);
-  rpc StopJob (BossStopJobRequest) returns (BossStopJobResponse);
+  rpc AbortJob (BossAbortJobRequest) returns (BossAbortJobResponse);
 }
 
 message BossPingRequest {
@@ -83,10 +83,10 @@ message BossRunJobResponse {
   repeated MinionStatus minion_statuses = 2;
 }
 
-message BossStopJobRequest {
+message BossAbortJobRequest {
 }
 
-message BossStopJobResponse {
+message BossAbortJobResponse {
     GeneralStatus status = 1;
     repeated MinionStatus minion_statuses = 2;
 }

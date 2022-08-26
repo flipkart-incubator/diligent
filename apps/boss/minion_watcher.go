@@ -122,8 +122,8 @@ func (f *MinionWatcher) pollOnce() {
 	case proto.JobState_ENDED_FAILURE:
 		log.Infof("Got ENDED_FAILURE for minion %s, marking finished", f.addr)
 		f.hasFinished = true
-	case proto.JobState_ENDED_STOPPED:
-		log.Infof("Got ENDED_STOPPED for minion %s, marking finished", f.addr)
+	case proto.JobState_ENDED_ABORTED:
+		log.Infof("Got ENDED_ABORTED for minion %s, marking finished", f.addr)
 		f.hasFinished = true
 	case proto.JobState_ENDED_NEVER_RAN:
 		log.Infof("Got ENDED_NEVER_RAN for minion %s, marking finished", f.addr)
