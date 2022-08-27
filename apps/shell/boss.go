@@ -286,15 +286,15 @@ func showMinionJobInfo(c *grumble.Context, mi *proto.MinionInfo) {
 }
 
 func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
-	jobId := "none"
-	jobState := "none"
 	if mi.GetJobInfo() != nil {
-		jobId = mi.GetJobInfo().GetJobId()
-		jobState = mi.GetJobInfo().GetJobState().String()
+		c.App.Printf("[version=%s, pid=%s, uptime=%s, no current job\n",
+			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
+			mi.GetProcessInfo().GetUptime())
+	} else {
+		c.App.Printf("[version=%s, pid=%s, uptime=%s, jobId=%s, jobState=%s]\n",
+			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
+			mi.GetProcessInfo().GetUptime(), mi.GetJobInfo().GetJobId(), mi.GetJobInfo().GetJobState())
 	}
-	c.App.Printf("[version=%s, pid=%s, uptime=%s, jobId=%s, jobState=%s]\n",
-		mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
-		mi.GetProcessInfo().GetUptime(), jobId, jobState)
 }
 
 func bossWaitForMinions(c *grumble.Context) error {
