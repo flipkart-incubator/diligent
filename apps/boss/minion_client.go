@@ -112,8 +112,7 @@ func (m *MinionClient) PrepareJob(ctx context.Context, jobId, jobDesc string,
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	res, err := grpcClient.PrepareJob(grpcCtx, &proto.MinionPrepareJobRequest{
-		JobId:   jobId,
-		JobDesc: jobDesc,
+		JobId: jobId,
 		JobSpec: &proto.JobSpec{
 			DataSpec:     dataSpec,
 			DbSpec:       dbSpec,
@@ -162,6 +161,27 @@ func (m *MinionClient) AbortJob(ctx context.Context) (*proto.MinionAbortJobRespo
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	res, err := grpcClient.AbortJob(grpcCtx, &proto.MinionAbortJobRequest{})
+	grpcCtxCancel()
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (m *MinionClient) QueryJob(ctx context.Context, jobId string) (*proto.MinionQueryJobResponse, error) {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+
+	minionConnection, err := m.getConnectionForMinion(ctx)
+	if err != nil {
+		log.Errorf("QueryJob(%s): %s", jobId, err.Error())
+		return nil, err
+	}
+	defer minionConnection.Close()
+	grpcClient := proto.NewMinionClient(minionConnection)
+
+	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
+	res, err := grpcClient.QueryJob(grpcCtx, &proto.MinionQueryJobRequest{JobId: jobId})
 	grpcCtxCancel()
 	if err != nil {
 		return nil, err

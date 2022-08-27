@@ -16,7 +16,7 @@ import (
 type JobState int
 
 const (
-	Undefined JobState = iota
+	_ JobState = iota
 	Prepared
 	Running
 	EndedSuccess
@@ -140,14 +140,20 @@ func PrepareJob(ctx context.Context, id string, spec *proto.JobSpec, metrics *me
 }
 
 func (j *Job) Id() string {
+	j.mut.Lock()
+	defer j.mut.Unlock()
 	return j.id
 }
 
 func (j *Job) State() JobState {
+	j.mut.Lock()
+	defer j.mut.Unlock()
 	return j.state
 }
 
 func (j *Job) Info() *JobInfo {
+	j.mut.Lock()
+	defer j.mut.Unlock()
 	return &JobInfo{
 		id:          j.id,
 		state:       j.state,
@@ -158,35 +164,39 @@ func (j *Job) Info() *JobInfo {
 	}
 }
 
-func (j *Job) Run(ctx context.Context) error {
+func (j *Job) Run(ctx context.Context) (chan int, error) {
 	log.Infof("Run(%s)", j.id)
 	j.mut.Lock()
 	defer j.mut.Unlock()
 
 	// Process only job is in prepared state
 	if j.state != Prepared {
-		return fmt.Errorf("job is in %s state. cannot run", j.state.String())
+		return nil, fmt.Errorf("job is in %s state. cannot run", j.state.String())
 	}
 
+	notifyCh := make(chan int)
 	j.state = Running
 	j.runTime = time.Now()
 
 	go func() {
 		j.mut.Lock()
 		j.mut.Unlock()
-		log.Infof("Starting workload...")
+		log.Infof("Starting workload for job %s...", j.id)
 		j.workload.workload.Start(time.Duration(j.workload.durationSec) * time.Second)
-		log.Infof("Waiting for workload to complete...")
+		log.Infof("Waiting for workload to complete for job %s...", j.id)
 		j.workload.workload.WaitForCompletion()
-		log.Infof("Workload completed. Marking current job as ended successfully")
+		log.Infof("Workload completed. Marking job %s as ended successfully", j.id)
 		j.mut.Lock()
 		j.state = EndedSuccess
 		j.endTime = time.Now()
+		j.cleanupStateLocked()
 		j.mut.Unlock()
+		// Notify waiter
+		notifyCh <- 0
 	}()
 
 	log.Infof("Run(%s) initiated successfully", j.id)
-	return nil
+	return notifyCh, nil
 }
 
 func (j *Job) Abort(ctx context.Context) error {
@@ -208,15 +218,18 @@ func (j *Job) Abort(ctx context.Context) error {
 		j.endTime = time.Now()
 	}
 
+	log.Infof("Abort(%s) completed successfully", j.id)
+	return nil
+}
+
+func (j *Job) cleanupStateLocked() {
+	log.Infof("Cleaning runtime state of job %s...", j.id)
 	j.data = nil
 	if j.db != nil {
 		j.db.db.Close()
 		j.db = nil
 	}
 	j.workload = nil
-
-	log.Infof("Abort(%s) completed successfully", j.id)
-	return nil
 }
 
 func (j *Job) loadDataSpec(ctx context.Context, protoDs *proto.DataSpec) error {

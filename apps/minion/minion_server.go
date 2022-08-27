@@ -150,6 +150,11 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 	defer s.mut.Unlock()
 
 	log.Infof("GRPC: Ping completed successfully")
+	var protoJobInfo *proto.JobInfo = nil
+	currentJob := s.jobTracker.CurrentJob()
+	if currentJob != nil {
+		protoJobInfo = currentJob.Info().ToProto()
+	}
 	return &proto.MinionPingResponse{
 		BuildInfo: &proto.BuildInfo{
 			AppName:    buildinfo.AppName,
@@ -163,7 +168,7 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 			StartTime: s.startTime.Format(time.UnixDate),
 			Uptime:    time.Since(s.startTime).String(),
 		},
-		JobInfo: s.jobTracker.CurrentJobInfo().ToProto(),
+		JobInfo: protoJobInfo,
 	}, nil
 }
 
@@ -190,8 +195,7 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 			IsOk:          true,
 			FailureReason: "",
 		},
-		Pid:   s.pid,
-		JobId: s.jobTracker.CurrentJob().Id(),
+		Pid: s.pid,
 	}, nil
 }
 
@@ -218,8 +222,7 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 			IsOk:          true,
 			FailureReason: "",
 		},
-		Pid:   s.pid,
-		JobId: s.jobTracker.CurrentJob().Id(),
+		Pid: s.pid,
 	}, nil
 }
 
@@ -246,7 +249,34 @@ func (s *MinionServer) AbortJob(ctx context.Context, in *proto.MinionAbortJobReq
 			IsOk:          true,
 			FailureReason: "",
 		},
-		Pid:   s.pid,
-		JobId: s.jobTracker.CurrentJob().Id(),
+		Pid: s.pid,
+	}, nil
+}
+
+func (s *MinionServer) QueryJob(ctx context.Context, in *proto.MinionQueryJobRequest) (*proto.MinionQueryJobResponse, error) {
+	log.Infof("GRPC: QueryJob()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	jobInfo := s.jobTracker.GetJobInfo(in.GetJobId())
+	if jobInfo == nil {
+		return &proto.MinionQueryJobResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "no information found for job: " + in.GetJobId(),
+			},
+			Pid: s.pid,
+		}, nil
+	}
+
+	// Query was successful
+	log.Infof("GRPC: QueryJob() completed successfully")
+	return &proto.MinionQueryJobResponse{
+		Status: &proto.GeneralStatus{
+			IsOk:          true,
+			FailureReason: "",
+		},
+		Pid:     s.pid,
+		JobInfo: jobInfo.ToProto(),
 	}, nil
 }

@@ -97,7 +97,7 @@ func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId, jobDesc s
 		return
 	}
 
-	m.startWatchingMinion(res.GetPid(), res.GetJobId())
+	m.startWatchingMinion(res.GetPid(), jobId)
 	log.Infof("Successfully prepared minion %s", m.addr)
 	ch <- &proto.MinionStatus{
 		Addr: m.addr,

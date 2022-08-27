@@ -97,37 +97,47 @@ func (f *MinionWatcher) pollContinuously(ctx context.Context) {
 }
 
 func (f *MinionWatcher) pollOnce() {
-	log.Infof("Polling minion %s. Count=%d", f.addr, f.pollCount)
-	res, err := f.client.Ping(context.TODO())
+	log.Infof("Querying job status for minion %s. Count=%d", f.addr, f.pollCount)
+	res, err := f.client.QueryJob(context.TODO(), f.jobId)
 
 	f.mut.Lock()
 	defer f.mut.Unlock()
 
-	if err != nil {
-		log.Infof("Polling failed for minion %s, marking failed", f.addr)
-		f.hasFailed = true
-	}
-	if res.GetProcessInfo().GetPid() != f.pid {
-		log.Infof("Pid mismatch on minion %s (expected=%s, actual=%s), marking failed", f.addr, f.pid, res.GetProcessInfo().GetPid())
-		f.hasFailed = true
-	}
-	if res.GetJobInfo().GetJobId() != f.jobId {
-		log.Infof("JobId mismatch for minion %s (expected=%s, actual=%s), marking failed", f.addr, f.jobId, res.GetJobInfo().GetJobId())
-		f.hasFailed = true
-	}
-	switch res.GetJobInfo().GetJobState() {
-	case proto.JobState_ENDED_SUCCESS:
-		log.Infof("Got ENDED_SUCCESS for minion %s, marking finished", f.addr)
-		f.hasFinished = true
-	case proto.JobState_ENDED_FAILURE:
-		log.Infof("Got ENDED_FAILURE for minion %s, marking finished", f.addr)
-		f.hasFinished = true
-	case proto.JobState_ENDED_ABORTED:
-		log.Infof("Got ENDED_ABORTED for minion %s, marking finished", f.addr)
-		f.hasFinished = true
-	case proto.JobState_ENDED_NEVER_RAN:
-		log.Infof("Got ENDED_NEVER_RAN for minion %s, marking finished", f.addr)
-		f.hasFinished = true
-	}
 	f.pollCount++
+
+	if err != nil {
+		// The query failed
+		log.Infof("Job status query failed for minion %s, marking failed (reason=%s)", f.addr, err.Error())
+		f.hasFailed = true
+	} else {
+		// We got a response
+		if res.GetStatus().GetIsOk() == false {
+			// The response is negative
+			log.Infof("Job status query failed for minion %s, marking failed (reason=%s)", f.addr, res.GetStatus().GetFailureReason())
+			f.hasFailed = true
+		} else {
+			// The response is positive
+			if res.GetPid() != f.pid {
+				// Though we got a response, it looks like the minion has restarted
+				log.Infof("Pid mismatch on minion %s (expected=%s, actual=%s), marking failed", f.addr, f.pid, res.GetPid())
+				f.hasFailed = true
+			} else {
+				// The response is from the correct minion
+				switch res.GetJobInfo().GetJobState() {
+				case proto.JobState_ENDED_SUCCESS:
+					log.Infof("Got ENDED_SUCCESS for minion %s, marking finished", f.addr)
+					f.hasFinished = true
+				case proto.JobState_ENDED_FAILURE:
+					log.Infof("Got ENDED_FAILURE for minion %s, marking finished", f.addr)
+					f.hasFinished = true
+				case proto.JobState_ENDED_ABORTED:
+					log.Infof("Got ENDED_ABORTED for minion %s, marking finished", f.addr)
+					f.hasFinished = true
+				case proto.JobState_ENDED_NEVER_RAN:
+					log.Infof("Got ENDED_NEVER_RAN for minion %s, marking finished", f.addr)
+					f.hasFinished = true
+				}
+			}
+		}
+	}
 }

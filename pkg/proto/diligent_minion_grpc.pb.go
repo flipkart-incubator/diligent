@@ -28,6 +28,7 @@ type MinionClient interface {
 	PrepareJob(ctx context.Context, in *MinionPrepareJobRequest, opts ...grpc.CallOption) (*MinionPrepareJobResponse, error)
 	RunJob(ctx context.Context, in *MinionRunJobRequest, opts ...grpc.CallOption) (*MinionRunJobResponse, error)
 	AbortJob(ctx context.Context, in *MinionAbortJobRequest, opts ...grpc.CallOption) (*MinionAbortJobResponse, error)
+	QueryJob(ctx context.Context, in *MinionQueryJobRequest, opts ...grpc.CallOption) (*MinionQueryJobResponse, error)
 }
 
 type minionClient struct {
@@ -74,6 +75,15 @@ func (c *minionClient) AbortJob(ctx context.Context, in *MinionAbortJobRequest, 
 	return out, nil
 }
 
+func (c *minionClient) QueryJob(ctx context.Context, in *MinionQueryJobRequest, opts ...grpc.CallOption) (*MinionQueryJobResponse, error) {
+	out := new(MinionQueryJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Minion/QueryJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MinionServer is the server API for Minion service.
 // All implementations must embed UnimplementedMinionServer
 // for forward compatibility
@@ -84,6 +94,7 @@ type MinionServer interface {
 	PrepareJob(context.Context, *MinionPrepareJobRequest) (*MinionPrepareJobResponse, error)
 	RunJob(context.Context, *MinionRunJobRequest) (*MinionRunJobResponse, error)
 	AbortJob(context.Context, *MinionAbortJobRequest) (*MinionAbortJobResponse, error)
+	QueryJob(context.Context, *MinionQueryJobRequest) (*MinionQueryJobResponse, error)
 	mustEmbedUnimplementedMinionServer()
 }
 
@@ -102,6 +113,9 @@ func (UnimplementedMinionServer) RunJob(context.Context, *MinionRunJobRequest) (
 }
 func (UnimplementedMinionServer) AbortJob(context.Context, *MinionAbortJobRequest) (*MinionAbortJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AbortJob not implemented")
+}
+func (UnimplementedMinionServer) QueryJob(context.Context, *MinionQueryJobRequest) (*MinionQueryJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryJob not implemented")
 }
 func (UnimplementedMinionServer) mustEmbedUnimplementedMinionServer() {}
 
@@ -188,6 +202,24 @@ func _Minion_AbortJob_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Minion_QueryJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MinionQueryJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinionServer).QueryJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Minion/QueryJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinionServer).QueryJob(ctx, req.(*MinionQueryJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Minion_ServiceDesc is the grpc.ServiceDesc for Minion service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -210,6 +242,10 @@ var Minion_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AbortJob",
 			Handler:    _Minion_AbortJob_Handler,
+		},
+		{
+			MethodName: "QueryJob",
+			Handler:    _Minion_QueryJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

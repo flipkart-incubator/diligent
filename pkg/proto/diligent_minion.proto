@@ -13,6 +13,7 @@ service Minion {
   rpc PrepareJob (MinionPrepareJobRequest) returns (MinionPrepareJobResponse);
   rpc RunJob (MinionRunJobRequest) returns (MinionRunJobResponse);
   rpc AbortJob (MinionAbortJobRequest) returns (MinionAbortJobResponse);
+  rpc QueryJob (MinionQueryJobRequest) returns (MinionQueryJobResponse);
 }
 
 message MinionPingRequest {
@@ -26,14 +27,12 @@ message MinionPingResponse {
 
 message MinionPrepareJobRequest {
   string job_id = 1;
-  string job_desc = 2;
   JobSpec job_spec = 3;
 }
 
 message MinionPrepareJobResponse {
   GeneralStatus status = 1;
   string pid = 2;
-  string job_id = 3;
 }
 
 message MinionRunJobRequest {
@@ -42,7 +41,6 @@ message MinionRunJobRequest {
 message MinionRunJobResponse {
   GeneralStatus status = 1;
   string pid = 2;
-  string job_id = 3;
 }
 
 message MinionAbortJobRequest {
@@ -51,6 +49,14 @@ message MinionAbortJobRequest {
 message MinionAbortJobResponse {
   GeneralStatus status = 1;
   string pid = 2;
-  string job_id = 3;
 }
 
+message MinionQueryJobRequest {
+  string job_id = 1;
+}
+
+message MinionQueryJobResponse {
+  GeneralStatus status = 1;
+  string pid = 2;
+  JobInfo job_info = 3;
+}
