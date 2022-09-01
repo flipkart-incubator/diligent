@@ -45,13 +45,6 @@ message BossUnregisterMinionResponse {
   GeneralStatus status = 1;
 }
 
-message BossGetMinionsRequest {
-}
-
-message BossGetMinionsResponse {
-  repeated MinionInfo minion_infos = 1;
-}
-
 message MinionInfo {
   string addr = 1;
   GeneralStatus reachability = 2;
@@ -65,14 +58,20 @@ message MinionStatus {
   GeneralStatus status = 2;
 }
 
+message BossGetMinionsRequest {
+}
+
+message BossGetMinionsResponse {
+  repeated MinionInfo minion_infos = 1;
+}
+
 message BossPrepareJobRequest {
   JobSpec job_spec = 1;
-  string job_desc = 2;
 }
 
 message BossPrepareJobResponse {
-  GeneralStatus status = 2;
-  string job_id = 1;
+  GeneralStatus status = 1;
+  string job_id = 2;
   repeated MinionStatus minion_statuses = 3;
 }
 

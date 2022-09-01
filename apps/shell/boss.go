@@ -89,7 +89,6 @@ func init() {
 			f.Int("t", "duration", 0, "duration after which workload is terminated (seconds). zero for no timout (default)")
 			f.Int("c", "concurrency", 1, "number of concurrent workers")
 			f.Int("k", "batch-size", 1, "number of statements in a transaction (for transaction based workloads)")
-			f.String("m", "description", "", "a description of the job")
 		},
 		Args: func(a *grumble.Args) {
 			a.String("workload", "name of workload to run [insert,insert-txn,select,select-txn,update,update-txn,delete,delete-txn", grumble.Default(""))
@@ -430,11 +429,7 @@ func bossPrepareJob(c *grumble.Context) error {
 		return err
 	}
 
-	// Description
-	jobDesc := c.Flags.String("description")
-
 	c.App.Println("Preparing job:")
-	c.App.Println("    Description:", jobDesc)
 	c.App.Println("    DataSpec:")
 	c.App.Println("    	file:", dataspecFileName)
 	c.App.Println("    	numRows:", dataSpec.KeyGenSpec.NumKeys())
@@ -457,7 +452,6 @@ func bossPrepareJob(c *grumble.Context) error {
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
 	res, err := bossClient.PrepareJob(grpcCtx, &proto.BossPrepareJobRequest{
-		JobDesc: jobDesc,
 		JobSpec: &proto.JobSpec{
 			DataSpec: proto.DataSpecToProto(dataSpec),
 			DbSpec: &proto.DBSpec{

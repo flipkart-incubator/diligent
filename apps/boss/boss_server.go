@@ -210,7 +210,7 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 			BatchSize:     in.GetJobSpec().GetWorkloadSpec().GetBatchSize(),
 		}
 
-		go mm.PrepareJobOnMinion(ctx, jobId, in.GetJobDesc(), in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec, ch)
+		go mm.PrepareJobOnMinion(ctx, jobId, in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec, ch)
 		i++
 	}
 

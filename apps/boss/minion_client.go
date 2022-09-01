@@ -97,7 +97,7 @@ func (m *MinionClient) Ping(ctx context.Context) (*proto.MinionPingResponse, err
 	return res, nil
 }
 
-func (m *MinionClient) PrepareJob(ctx context.Context, jobId, jobDesc string,
+func (m *MinionClient) PrepareJob(ctx context.Context, jobId string,
 	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec) (*proto.MinionPrepareJobResponse, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()

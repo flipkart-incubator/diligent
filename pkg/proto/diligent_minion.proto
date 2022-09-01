@@ -27,7 +27,7 @@ message MinionPingResponse {
 
 message MinionPrepareJobRequest {
   string job_id = 1;
-  JobSpec job_spec = 3;
+  JobSpec job_spec = 2;
 }
 
 message MinionPrepareJobResponse {
