@@ -315,8 +315,8 @@ func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
 }
 
 func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
-	if mi.GetJobInfo() != nil {
-		c.App.Printf("[version=%s, pid=%s, uptime=%s, no current job\n",
+	if mi.GetJobInfo() == nil {
+		c.App.Printf("[version=%s, pid=%s, uptime=%s, idle\n",
 			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
 			mi.GetProcessInfo().GetUptime())
 	} else {
