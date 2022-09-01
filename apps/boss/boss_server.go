@@ -314,6 +314,43 @@ func (s *BossServer) AbortJob(ctx context.Context, in *proto.BossAbortJobRequest
 	}, nil
 }
 
+func (s *BossServer) QueryJob(ctx context.Context, in *proto.BossQueryJobRequest) (*proto.BossQueryJobResponse, error) {
+	log.Infof("GRPC: QueryJob()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	minionJobInfos := make([]*proto.MinionJobInfo, s.registry.GetNumMinions())
+	ch := make(chan *proto.MinionJobInfo)
+
+	for _, mm := range s.registry.GetMinionManagers() {
+		log.Infof("QueryJob(): Querying on Minion %s", mm.GetAddr())
+		go mm.QueryJobOnMinion(ctx, in.GetJobId(), ch)
+	}
+
+	// Collect execution results
+	for i, _ := range minionJobInfos {
+		minionJobInfos[i] = <-ch
+	}
+
+	// Build overall status
+	overallStatus := proto.GeneralStatus{
+		IsOk:          true,
+		FailureReason: "",
+	}
+	for _, ms := range minionJobInfos {
+		if !ms.Status.IsOk {
+			overallStatus.IsOk = false
+			overallStatus.FailureReason = "errors encountered on one or more minions"
+		}
+	}
+
+	log.Infof("QueryJob(): completed")
+	return &proto.BossQueryJobResponse{
+		Status:         &overallStatus,
+		MinionJobInfos: minionJobInfos,
+	}, nil
+}
+
 func (s *BossServer) getNextJobId() string {
 	id := fmt.Sprintf("%d", s.nextJobNum)
 	s.nextJobNum++

@@ -194,3 +194,39 @@ func (m *MinionManager) AbortJobOnMinion(ctx context.Context, ch chan *proto.Min
 	}
 	return
 }
+
+func (m *MinionManager) QueryJobOnMinion(ctx context.Context, jobId string, ch chan *proto.MinionJobInfo) {
+	res, err := m.client.QueryJob(ctx, jobId)
+
+	if err != nil {
+		ch <- &proto.MinionJobInfo{
+			Addr: m.addr,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}
+		return
+	}
+
+	if res.GetStatus().GetIsOk() != true {
+		ch <- &proto.MinionJobInfo{
+			Addr: m.addr,
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: res.GetStatus().GetFailureReason(),
+			},
+		}
+		return
+	}
+
+	log.Infof("Successfully triggered abort on minion %s", m.addr)
+	ch <- &proto.MinionJobInfo{
+		Addr: m.addr,
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+		JobInfo: res.GetJobInfo(),
+	}
+	return
+}

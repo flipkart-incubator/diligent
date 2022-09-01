@@ -32,6 +32,7 @@ type BossClient interface {
 	PrepareJob(ctx context.Context, in *BossPrepareJobRequest, opts ...grpc.CallOption) (*BossPrepareJobResponse, error)
 	RunJob(ctx context.Context, in *BossRunJobRequest, opts ...grpc.CallOption) (*BossRunJobResponse, error)
 	AbortJob(ctx context.Context, in *BossAbortJobRequest, opts ...grpc.CallOption) (*BossAbortJobResponse, error)
+	QueryJob(ctx context.Context, in *BossQueryJobRequest, opts ...grpc.CallOption) (*BossQueryJobResponse, error)
 }
 
 type bossClient struct {
@@ -105,6 +106,15 @@ func (c *bossClient) AbortJob(ctx context.Context, in *BossAbortJobRequest, opts
 	return out, nil
 }
 
+func (c *bossClient) QueryJob(ctx context.Context, in *BossQueryJobRequest, opts ...grpc.CallOption) (*BossQueryJobResponse, error) {
+	out := new(BossQueryJobResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/QueryJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BossServer is the server API for Boss service.
 // All implementations must embed UnimplementedBossServer
 // for forward compatibility
@@ -119,6 +129,7 @@ type BossServer interface {
 	PrepareJob(context.Context, *BossPrepareJobRequest) (*BossPrepareJobResponse, error)
 	RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error)
 	AbortJob(context.Context, *BossAbortJobRequest) (*BossAbortJobResponse, error)
+	QueryJob(context.Context, *BossQueryJobRequest) (*BossQueryJobResponse, error)
 	mustEmbedUnimplementedBossServer()
 }
 
@@ -146,6 +157,9 @@ func (UnimplementedBossServer) RunJob(context.Context, *BossRunJobRequest) (*Bos
 }
 func (UnimplementedBossServer) AbortJob(context.Context, *BossAbortJobRequest) (*BossAbortJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AbortJob not implemented")
+}
+func (UnimplementedBossServer) QueryJob(context.Context, *BossQueryJobRequest) (*BossQueryJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryJob not implemented")
 }
 func (UnimplementedBossServer) mustEmbedUnimplementedBossServer() {}
 
@@ -286,6 +300,24 @@ func _Boss_AbortJob_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Boss_QueryJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossQueryJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).QueryJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/QueryJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).QueryJob(ctx, req.(*BossQueryJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Boss_ServiceDesc is the grpc.ServiceDesc for Boss service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -320,6 +352,10 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AbortJob",
 			Handler:    _Boss_AbortJob_Handler,
+		},
+		{
+			MethodName: "QueryJob",
+			Handler:    _Boss_QueryJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
