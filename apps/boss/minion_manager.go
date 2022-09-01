@@ -13,10 +13,9 @@ import (
 // It uses a MinionWatcher to watch for the health and completion state of a minion once the minion is prepared
 // It is thread safe
 type MinionManager struct {
-	mut     sync.Mutex // Must be taken for all operations on the MinionManager
-	addr    string
-	client  *MinionClient
-	watcher *MinionWatcher
+	mut    sync.Mutex // Must be taken for all operations on the MinionManager
+	addr   string
+	client *MinionClient
 }
 
 func NewMinionManager(addr string) (*MinionManager, error) {
@@ -97,7 +96,6 @@ func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId string,
 		return
 	}
 
-	m.startWatchingMinion(res.GetPid(), jobId)
 	log.Infof("Successfully prepared minion %s", m.addr)
 	ch <- &proto.MinionStatus{
 		Addr: m.addr,
@@ -108,25 +106,7 @@ func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId string,
 	return
 }
 
-func (m *MinionManager) startWatchingMinion(pid, jobId string) {
-	if m.watcher != nil {
-		m.watcher.StopWatching()
-	}
-	m.watcher = NewMinionWatcher(m.addr, m.client, pid, jobId)
-	m.watcher.StartWatching()
-}
-
 func (m *MinionManager) RunJobOnMinion(ctx context.Context, ch chan *proto.MinionStatus) {
-	if m.watcher.HasFailed() {
-		ch <- &proto.MinionStatus{
-			Addr: m.addr,
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: fmt.Sprintf("minion %s failed since it was prepared", m.addr),
-			},
-		}
-	}
-
 	res, err := m.client.RunJob(ctx)
 	if err != nil {
 		ch <- &proto.MinionStatus{
