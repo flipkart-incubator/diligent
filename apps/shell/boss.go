@@ -382,7 +382,6 @@ func bossPrepareJob(c *grumble.Context) error {
 	dbDriver := c.Flags.String("db-driver")
 	switch dbDriver {
 	case "mysql", "pgx":
-		controllerApp.db.driver = dbDriver
 	default:
 		return fmt.Errorf("invalid driver: '%s'. Allowed values are 'mysql', 'pgx'", dbDriver)
 	}
@@ -392,7 +391,6 @@ func bossPrepareJob(c *grumble.Context) error {
 	if dbUrl == "" {
 		return fmt.Errorf("please specify the connection url")
 	}
-	controllerApp.db.url = dbUrl
 
 	durationSec := c.Flags.Int("duration")
 	if durationSec < 0 {
