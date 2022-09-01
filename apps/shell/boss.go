@@ -91,8 +91,8 @@ func init() {
 			f.Int("k", "batch-size", 1, "number of statements in a transaction (for transaction based workloads)")
 		},
 		Args: func(a *grumble.Args) {
-			a.String("workload", "name of workload to run [insert,insert-txn,select,select-txn,update,update-txn,delete,delete-txn", grumble.Default(""))
-			a.String("table", "name of the table to run the workload on", grumble.Default(""))
+			a.String("workload", "name of workload to run [insert,insert-txn,select,select-txn,update,update-txn,delete,delete-txn")
+			a.String("table", "name of the table to run the workload on")
 		},
 		Run: bossPrepareJob,
 	}
@@ -116,7 +116,7 @@ func init() {
 		Name: "query-job",
 		Help: "Query the status of a job",
 		Args: func(a *grumble.Args) {
-			a.String("job-id", "id of the job to query", grumble.Default(""))
+			a.String("job-id", "id of the job to query")
 		},
 		Run: bossQueryJob,
 	}
@@ -418,9 +418,6 @@ func bossPrepareJob(c *grumble.Context) error {
 	}
 
 	table := c.Args.String("table")
-	if table == "" {
-		return fmt.Errorf("please specify the table to run the workload on")
-	}
 
 	// Load dataSpec
 	c.App.Println("Loading data spec from file:", dataspecFileName)
@@ -554,9 +551,6 @@ func bossAbortJob(c *grumble.Context) error {
 
 func bossQueryJob(c *grumble.Context) error {
 	jobId := c.Args.String("job-id")
-	if jobId == "" {
-		return fmt.Errorf("please specify the job-id to query")
-	}
 
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)

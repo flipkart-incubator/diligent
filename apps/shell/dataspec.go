@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/desertbit/grumble"
 	"github.com/flipkart-incubator/diligent/pkg/datagen"
 	"strings"
@@ -24,7 +23,7 @@ func init() {
 			f.Int("s", "rec-size", 1024, "Approx size of each record")
 		},
 		Args: func(a *grumble.Args) {
-			a.String("name", "a name for the dataspec", grumble.Default(""))
+			a.String("name", "a name for the dataspec")
 		},
 		Run: dsCreate,
 	}
@@ -37,7 +36,7 @@ func init() {
 			f.Bool("v", "verbose", false, "show verbose information")
 		},
 		Args: func(a *grumble.Args) {
-			a.String("name", "name of the data spec", grumble.Default(""))
+			a.String("name", "name of the data spec")
 		},
 		Run: dsDesc,
 	}
@@ -67,9 +66,6 @@ func dsCreate(c *grumble.Context) error {
 	name := c.Args.String("name")
 	numRecs := c.Flags.Int("num-recs")
 	recSize := c.Flags.Int("rec-size")
-	if name == "" {
-		return fmt.Errorf("please specify a name for the dataspec")
-	}
 
 	c.App.Println("Creating dataspec...")
 	c.App.Println("name:", name)
@@ -91,9 +87,6 @@ func dsCreate(c *grumble.Context) error {
 
 func dsDesc(c *grumble.Context) error {
 	name := c.Args.String("name")
-	if name == "" {
-		return fmt.Errorf("please specify a name for the dataspec")
-	}
 	if !strings.HasSuffix(name, ".json") {
 		name = name + ".json"
 	}
