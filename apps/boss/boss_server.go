@@ -112,7 +112,7 @@ func (s *BossServer) RegisterMinion(_ context.Context, in *proto.BossRegisterMin
 	}, nil
 }
 
-func (s *BossServer) UnregisterMinion(_ context.Context, in *proto.BossUnregisterMinonRequest) (*proto.BossUnregisterMinionResponse, error) {
+func (s *BossServer) UnregisterMinion(_ context.Context, in *proto.BossUnregisterMinionRequest) (*proto.BossUnregisterMinionResponse, error) {
 	addr := in.GetAddr()
 	log.Infof("GRPC: UnregisterMinion(%s)", addr)
 	s.mut.Lock()
@@ -138,7 +138,7 @@ func (s *BossServer) UnregisterMinion(_ context.Context, in *proto.BossUnregiste
 	}, nil
 }
 
-func (s *BossServer) ShowMinions(ctx context.Context, _ *proto.BossShowMinionRequest) (*proto.BossShowMinionResponse, error) {
+func (s *BossServer) GetMinions(ctx context.Context, _ *proto.BossGetMinionsRequest) (*proto.BossGetMinionsResponse, error) {
 	log.Infof("GRPC: ShowMinions()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
@@ -154,7 +154,7 @@ func (s *BossServer) ShowMinions(ctx context.Context, _ *proto.BossShowMinionReq
 		minionInfos[i] = <-ch
 	}
 
-	return &proto.BossShowMinionResponse{
+	return &proto.BossGetMinionsResponse{
 		MinionInfos: minionInfos,
 	}, nil
 }

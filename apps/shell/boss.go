@@ -54,17 +54,17 @@ func init() {
 	}
 	bossCmd.AddCommand(bossMinionUnregisterCmd)
 
-	bossMinionShowCmd := &grumble.Command{
-		Name: "show-minions",
-		Help: "show minions registered with the boss",
+	bossMinionGetCmd := &grumble.Command{
+		Name: "get-minions",
+		Help: "get details of minions registered with the boss",
 		Flags: func(f *grumble.Flags) {
 			f.Bool("b", "build-info", false, "show build information")
 			f.Bool("p", "process-info", false, "show process information")
 			f.Bool("j", "job-info", false, "show job information")
 		},
-		Run: bossShowMinions,
+		Run: bossGetMinions,
 	}
-	bossCmd.AddCommand(bossMinionShowCmd)
+	bossCmd.AddCommand(bossMinionGetCmd)
 
 	bossMinionWaitCmd := &grumble.Command{
 		Name: "wait-for-minions",
@@ -212,7 +212,7 @@ func bossUnregisterMinion(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinonRequest{Addr: minionAddr})
+	_, err = bossClient.UnregisterMinion(grpcCtx, &proto.BossUnregisterMinionRequest{Addr: minionAddr})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {
@@ -224,7 +224,7 @@ func bossUnregisterMinion(c *grumble.Context) error {
 	return nil
 }
 
-func bossShowMinions(c *grumble.Context) error {
+func bossGetMinions(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -233,7 +233,7 @@ func bossShowMinions(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.ShowMinions(grpcCtx, &proto.BossShowMinionRequest{})
+	res, err := bossClient.GetMinions(grpcCtx, &proto.BossGetMinionsRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {
@@ -343,7 +343,7 @@ func bossWaitForMinions(c *grumble.Context) error {
 	defer cancel()
 	for {
 		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
-		res, err := bossClient.ShowMinions(grpcCtx, &proto.BossShowMinionRequest{})
+		res, err := bossClient.GetMinions(grpcCtx, &proto.BossGetMinionsRequest{})
 		grpcCancel()
 		if err != nil {
 			c.App.Printf("Request to boss failed (%s)\n", err.Error())
