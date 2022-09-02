@@ -1,5 +1,5 @@
 # Configure targets
-.PHONY: build-all build-boss build-minion build-shell clean test docker
+.PHONY: build-all build-proto build-boss build-minion build-shell clean test docker
 default: build-all
 
 BUILD_DIR:=./build
@@ -16,9 +16,14 @@ LDFLAGS_COMMON:=$(LDFLAGS_COMMON) -X \"github.com/flipkart-incubator/diligent/pk
 LDFLAGS_COMMON:=$(LDFLAGS_COMMON) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.GoVersion=$(GO_VERSION)\"
 LDFLAGS_COMMON:=$(LDFLAGS_COMMON) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.BuildTime=$(BUILD_TIME)\"
 
-build-all: build-boss build-minion build-shell
+build-all: build-proto build-boss build-minion build-shell
 
-build-boss:
+build-proto:
+	@echo "Building proto..."
+	@cd pkg/proto; sh ./protogen.sh
+	@echo "Done"
+
+build-boss: build-proto
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-boss\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building boss..."
@@ -26,7 +31,7 @@ build-boss:
 	@go build -o $(BOSS_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/boss
 	@echo "Done"
 
-build-minion:
+build-minion: build-proto
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-minion\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building minion..."
@@ -34,7 +39,7 @@ build-minion:
 	@go build -o $(MINION_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/minion
 	@echo "Done"
 
-build-shell:
+build-shell: build-proto
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-shell\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building shell..."
