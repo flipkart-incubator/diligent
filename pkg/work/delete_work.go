@@ -1,6 +1,7 @@
 package work
 
 import (
+	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/sqlgen"
 	log "github.com/sirupsen/logrus"
@@ -41,13 +42,13 @@ func NewDeleteRowWork(id int, rp *RunParams, recRange *intgen.Range) CompositeWo
 // Returns true as long as there are more rows to be deleteed
 // Returns false (indicating done) once delete has been attempted for all the rows that this DeleteRowWork
 // has been assigned
-func (w *DeleteRowWork) DoNext() bool {
+func (w *DeleteRowWork) DoNext() (bool, error) {
 	pos := int(w.currentPos.Load())
 	w.currentPos.Inc()
 
 	// Are we done?
 	if pos >= len(w.recIndexes) {
-		return false
+		return false, nil
 	}
 
 	sqlStmt := w.sqlGen.DeleteByPkStatement(w.recIndexes[pos])
@@ -62,14 +63,16 @@ func (w *DeleteRowWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("delete")
-		return true
+		return true, err
 	}
 	if count, _ := result.RowsAffected(); count != 1 {
-		log.Errorf("Expected 1 row to be affected, but instead got %d", count)
+		e := fmt.Errorf("expected 1 row to be affected, but instead got %d", count)
+		log.Error(e)
 		w.runParams.Metrics.ObserveStmtRowMismatch("delete")
+		return true, e
 	}
 
-	return true
+	return true, nil
 }
 
 // DeleteTxnWork is a CompositeWork that deletes one botch of rows using a transaction each time DoNext is called
@@ -104,13 +107,13 @@ func NewDeleteTxnWork(id int, rp *RunParams, recRange *intgen.Range) CompositeWo
 // Returns true as long as there are more rows to be deleted
 // Returns false (indicating done) once delete has been attempted for all the rows that this DeleteRowWork
 // has been assigned
-func (w *DeleteTxnWork) DoNext() bool {
+func (w *DeleteTxnWork) DoNext() (bool, error) {
 	batchStart := int(w.currentPos.Load())
 	w.currentPos.Add(int32(w.runParams.BatchSize))
 
 	// Are we done?
 	if batchStart >= len(w.recIndexes) {
-		return false
+		return false, nil
 	}
 
 	batchLimit := int(math.Min(float64(batchStart+w.runParams.BatchSize), float64(len(w.recIndexes))))
@@ -130,10 +133,11 @@ func (w *DeleteTxnWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("begin")
-		return true
+		return true, err
 	}
 
 	// Delete each record
+	statementErrors := 0
 	for _, stmt := range sqlStatements {
 		stmtStartTime = time.Now()
 		log.Tracef("SQL: %s", stmt)
@@ -142,11 +146,13 @@ func (w *DeleteTxnWork) DoNext() bool {
 		if err != nil {
 			log.Error(err)
 			w.runParams.Metrics.ObserveStmtFailure("delete")
+			statementErrors++
 			continue
 		}
 		if count, _ := result.RowsAffected(); count != 1 {
 			log.Errorf("Expected 1 row to be affected, but instead got %d", count)
 			w.runParams.Metrics.ObserveStmtRowMismatch("delete")
+			statementErrors++
 		}
 	}
 
@@ -162,8 +168,14 @@ func (w *DeleteTxnWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("commit")
-		return true
+		return true, err
 	}
 
-	return true
+	if statementErrors > 0 {
+		e := fmt.Errorf("encountered errors with statements within the transaction")
+		log.Error(e)
+		return true, e
+	}
+
+	return true, nil
 }

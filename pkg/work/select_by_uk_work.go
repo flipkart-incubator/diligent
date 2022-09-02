@@ -1,6 +1,7 @@
 package work
 
 import (
+	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/sqlgen"
 	log "github.com/sirupsen/logrus"
@@ -27,7 +28,7 @@ func NewSelectByUkRowWork(id int, rp *RunParams, recRange *intgen.Range) Composi
 
 // DoNext inserts a single record, directly without transactions
 // This DoNext method never returns false (done) as records can be selected forever
-func (w *SelectByUkRowWork) DoNext() bool {
+func (w *SelectByUkRowWork) DoNext() (bool, error) {
 	// Generate SQL statement
 	sqlStmt := w.sqlGen.SelectByUkStatement(w.recRange.Rand())
 
@@ -46,17 +47,17 @@ func (w *SelectByUkRowWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("select")
-		return true
+		return true, err
 	}
 
-	return true
+	return true, nil
 }
 
 type SelectByUkTxnWork struct {
-	id            int
-	runParams     *RunParams
-	recRange      *intgen.Range
-	sqlGen        *sqlgen.SqlGen
+	id        int
+	runParams *RunParams
+	recRange  *intgen.Range
+	sqlGen    *sqlgen.SqlGen
 }
 
 func NewSelectByUkTxnWork(id int, rp *RunParams, recRange *intgen.Range) CompositeWork {
@@ -69,7 +70,7 @@ func NewSelectByUkTxnWork(id int, rp *RunParams, recRange *intgen.Range) Composi
 }
 
 // DoNext selects a batch of records with transaction
-func (w *SelectByUkTxnWork) DoNext() bool {
+func (w *SelectByUkTxnWork) DoNext() (bool, error) {
 	// Generate SQL statements
 	sqlStatements := make([]string, w.runParams.BatchSize)
 	for i := 0; i < len(sqlStatements); i++ {
@@ -86,10 +87,11 @@ func (w *SelectByUkTxnWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("begin")
-		return true
+		return true, err
 	}
 
 	// Select each record
+	statementErrors := 0
 	for _, stmt := range sqlStatements {
 		stmtStartTime = time.Now()
 		log.Tracef("SQL: %s", stmt)
@@ -101,7 +103,7 @@ func (w *SelectByUkTxnWork) DoNext() bool {
 		if err != nil {
 			log.Error(err)
 			w.runParams.Metrics.ObserveStmtFailure("select")
-			continue
+			statementErrors++
 		}
 	}
 
@@ -117,8 +119,14 @@ func (w *SelectByUkTxnWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("commit")
-		return true
+		return true, err
 	}
 
-	return true
+	if statementErrors > 0 {
+		e := fmt.Errorf("encountered errors with statements within the transaction")
+		log.Error(e)
+		return true, e
+	}
+
+	return true, nil
 }

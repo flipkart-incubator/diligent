@@ -23,7 +23,7 @@ build-proto:
 	@cd pkg/proto; sh ./protogen.sh
 	@echo "Done"
 
-build-boss: build-proto
+build-boss:
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-boss\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building boss..."
@@ -31,7 +31,7 @@ build-boss: build-proto
 	@go build -o $(BOSS_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/boss
 	@echo "Done"
 
-build-minion: build-proto
+build-minion:
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-minion\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building minion..."
@@ -39,7 +39,7 @@ build-minion: build-proto
 	@go build -o $(MINION_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/minion
 	@echo "Done"
 
-build-shell: build-proto
+build-shell:
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-shell\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building shell..."

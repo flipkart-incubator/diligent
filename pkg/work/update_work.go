@@ -1,6 +1,7 @@
 package work
 
 import (
+	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/sqlgen"
 	log "github.com/sirupsen/logrus"
@@ -27,7 +28,7 @@ func NewUpdateRowWork(id int, rp *RunParams, recRange *intgen.Range) CompositeWo
 
 // DoNext updates a single record, directly without transactions
 // This DoNext method never returns false (done) as records can be updated forever
-func (w *UpdateRowWork) DoNext() bool {
+func (w *UpdateRowWork) DoNext() (bool, error) {
 	// Generate SQL statement
 	sqlStmt := w.sqlGen.UpdatePayloadByPkStatement(w.recRange.Rand())
 
@@ -41,14 +42,14 @@ func (w *UpdateRowWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("update")
-		return true
+		return true, err
 	}
 	if count, _ := result.RowsAffected(); count != 1 {
 		log.Errorf("Expected 1 row to be affected, but instead got %d", count)
 		w.runParams.Metrics.ObserveStmtRowMismatch("update")
 	}
 
-	return true
+	return true, nil
 }
 
 type UpdateTxnWork struct {
@@ -69,7 +70,7 @@ func NewUpdateTxnWork(id int, rp *RunParams, recRange *intgen.Range) CompositeWo
 
 // DoNext updates a batch of records with transaction
 // This DoNext method never returns false (done) as records can be updated forever
-func (w *UpdateTxnWork) DoNext() bool {
+func (w *UpdateTxnWork) DoNext() (bool, error) {
 	// Generate SQL statements
 	sqlStatements := make([]string, w.runParams.BatchSize)
 	for i := 0; i < len(sqlStatements); i++ {
@@ -86,10 +87,11 @@ func (w *UpdateTxnWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("begin")
-		return true
+		return true, err
 	}
 
 	// Delete each record
+	statementErrors := 0
 	for _, stmt := range sqlStatements {
 		stmtStartTime = time.Now()
 		log.Tracef("SQL: %s", stmt)
@@ -98,11 +100,13 @@ func (w *UpdateTxnWork) DoNext() bool {
 		if err != nil {
 			log.Error(err)
 			w.runParams.Metrics.ObserveStmtFailure("update")
+			statementErrors++
 			continue
 		}
 		if count, _ := result.RowsAffected(); count != 1 {
 			log.Errorf("Expected 1 row to be affected, but instead got %d", count)
 			w.runParams.Metrics.ObserveStmtRowMismatch("update")
+			statementErrors++
 		}
 	}
 
@@ -118,8 +122,14 @@ func (w *UpdateTxnWork) DoNext() bool {
 	if err != nil {
 		log.Error(err)
 		w.runParams.Metrics.ObserveStmtFailure("commit")
-		return true
+		return true, err
 	}
 
-	return true
+	if statementErrors > 0 {
+		e := fmt.Errorf("encountered errors with statements within the transaction")
+		log.Error(e)
+		return true, e
+	}
+
+	return true, nil
 }

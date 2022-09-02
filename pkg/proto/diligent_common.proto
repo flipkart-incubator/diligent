@@ -106,4 +106,6 @@ message JobInfo {
   string prepare_time = 5;
   string run_time = 6;
   string end_time = 7;
+  int32 fatal_errors = 8;
+  int32 non_fatal_errors = 9;
 }

@@ -62,12 +62,14 @@ func (j JobState) ToProto() proto.JobState {
 }
 
 type JobInfo struct {
-	id          string
-	state       JobState
-	spec        *proto.JobSpec
-	prepareTime time.Time
-	runTime     time.Time
-	endTime     time.Time
+	id             string
+	state          JobState
+	spec           *proto.JobSpec
+	prepareTime    time.Time
+	runTime        time.Time
+	endTime        time.Time
+	fatalErrors    int
+	nonFatalErrors int
 }
 
 func (j *JobInfo) ToProto() *proto.JobInfo {
@@ -75,12 +77,14 @@ func (j *JobInfo) ToProto() *proto.JobInfo {
 		return nil
 	}
 	return &proto.JobInfo{
-		JobId:       j.id,
-		JobSpec:     j.spec,
-		JobState:    j.state.ToProto(),
-		PrepareTime: j.prepareTime.Format(time.UnixDate),
-		RunTime:     j.runTime.Format(time.UnixDate),
-		EndTime:     j.endTime.Format(time.UnixDate),
+		JobId:          j.id,
+		JobSpec:        j.spec,
+		JobState:       j.state.ToProto(),
+		PrepareTime:    j.prepareTime.Format(time.UnixDate),
+		RunTime:        j.runTime.Format(time.UnixDate),
+		EndTime:        j.endTime.Format(time.UnixDate),
+		FatalErrors:    int32(j.fatalErrors),
+		NonFatalErrors: int32(j.nonFatalErrors),
 	}
 }
 
@@ -89,18 +93,20 @@ func (j *JobInfo) ToProto() *proto.JobInfo {
 type Job struct {
 	mut sync.Mutex
 
-	id    string
-	state JobState
-	spec  *proto.JobSpec
+	id string
 
+	spec     *proto.JobSpec
 	data     *DataContext
 	db       *DBContext
 	workload *WorkloadContext
 	metrics  *metrics.DiligentMetrics
 
-	prepareTime time.Time
-	runTime     time.Time
-	endTime     time.Time
+	state          JobState
+	prepareTime    time.Time
+	runTime        time.Time
+	endTime        time.Time
+	fatalErrors    int
+	nonFatalErrors int
 }
 
 func PrepareJob(ctx context.Context, id string, spec *proto.JobSpec, metrics *metrics.DiligentMetrics) (*Job, error) {
@@ -155,12 +161,14 @@ func (j *Job) Info() *JobInfo {
 	j.mut.Lock()
 	defer j.mut.Unlock()
 	return &JobInfo{
-		id:          j.id,
-		state:       j.state,
-		spec:        j.spec,
-		prepareTime: j.prepareTime,
-		runTime:     j.runTime,
-		endTime:     j.endTime,
+		id:             j.id,
+		state:          j.state,
+		spec:           j.spec,
+		prepareTime:    j.prepareTime,
+		runTime:        j.runTime,
+		endTime:        j.endTime,
+		fatalErrors:    j.fatalErrors,
+		nonFatalErrors: j.nonFatalErrors,
 	}
 }
 
@@ -178,25 +186,50 @@ func (j *Job) Run(ctx context.Context) (chan int, error) {
 	j.state = Running
 	j.runTime = time.Now()
 
-	go func() {
-		j.mut.Lock()
-		j.mut.Unlock()
-		log.Infof("Starting workload for job %s...", j.id)
-		j.workload.workload.Start(time.Duration(j.workload.durationSec) * time.Second)
-		log.Infof("Waiting for workload to complete for job %s...", j.id)
-		j.workload.workload.WaitForCompletion()
-		log.Infof("Workload completed. Marking job %s as ended successfully", j.id)
-		j.mut.Lock()
-		j.state = EndedSuccess
-		j.endTime = time.Now()
-		j.cleanupStateLocked()
-		j.mut.Unlock()
-		// Notify waiter
-		notifyCh <- 0
-	}()
+	go j.runWorkload(notifyCh)
 
 	log.Infof("Run(%s) initiated successfully", j.id)
 	return notifyCh, nil
+}
+
+func (j *Job) runWorkload(ch chan int) {
+	j.mut.Lock()
+	j.mut.Unlock()
+	log.Infof("Starting workload for job %s...", j.id)
+
+	resultCh := make(chan *work.WorkloadResult)
+	j.workload.workload.Start(time.Duration(j.workload.durationSec)*time.Second, resultCh)
+
+	log.Infof("Waiting for workload to complete for job %s...", j.id)
+	result := <-resultCh
+	log.Infof("Workload completed for job %s. Result=%v", j.id, result)
+
+	j.mut.Lock()
+	defer j.mut.Unlock()
+
+	j.endTime = time.Now()
+	j.fatalErrors = result.FatalErrors
+	j.nonFatalErrors = result.NonFatalErrors
+
+	switch {
+	case result.IsAborted:
+		j.state = EndedAborted
+	case result.FatalErrors > 0 || result.NonFatalErrors > 0:
+		j.state = EndedFailure
+	default:
+		j.state = EndedSuccess
+	}
+
+	log.Infof("Cleaning runtime state of job %s...", j.id)
+	j.data = nil
+	if j.db != nil {
+		j.db.db.Close()
+		j.db = nil
+	}
+	j.workload = nil
+
+	// Notify waiter
+	ch <- 0
 }
 
 func (j *Job) Abort(ctx context.Context) error {
@@ -210,26 +243,11 @@ func (j *Job) Abort(ctx context.Context) error {
 	}
 
 	if j.state == Running {
-		if j.workload.workload.IsRunning() {
-			j.workload.workload.Cancel()
-			j.workload.workload.WaitForCompletion()
-		}
-		j.state = EndedAborted
-		j.endTime = time.Now()
+		j.workload.workload.Abort()
 	}
 
 	log.Infof("Abort(%s) completed successfully", j.id)
 	return nil
-}
-
-func (j *Job) cleanupStateLocked() {
-	log.Infof("Cleaning runtime state of job %s...", j.id)
-	j.data = nil
-	if j.db != nil {
-		j.db.db.Close()
-		j.db = nil
-	}
-	j.workload = nil
 }
 
 func (j *Job) loadDataSpec(ctx context.Context, protoDs *proto.DataSpec) error {

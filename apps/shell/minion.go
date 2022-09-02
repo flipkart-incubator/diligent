@@ -197,6 +197,8 @@ func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
 	c.App.Printf("\tprepare-time: %s\n", ji.GetPrepareTime())
 	c.App.Printf("\trun-time:     %s\n", ji.GetRunTime())
 	c.App.Printf("\tend-time:     %s\n", ji.GetEndTime())
+	c.App.Printf("\tfatal-errors:     %d\n", ji.GetFatalErrors())
+	c.App.Printf("\tnon-fatal-errors: %d\n", ji.GetNonFatalErrors())
 	c.App.Printf("\tdata-spec:\n")
 	c.App.Printf("\t\tdata-num-recs: %d\n", ds.KeyGenSpec.NumKeys())
 	c.App.Printf("\t\tdata-rec-size: %d\n", ji.GetJobSpec().GetDataSpec().GetRecordSize())
