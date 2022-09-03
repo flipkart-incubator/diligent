@@ -306,6 +306,7 @@ func awaitJobCompletion(c *grumble.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	for {
+		c.App.Printf(".")
 		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 		res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{
 			JobId: jobId,
@@ -315,12 +316,14 @@ func awaitJobCompletion(c *grumble.Context) error {
 			c.App.Printf("Request to boss failed (%s)\n", err.Error())
 			continue
 		}
-		errorCount := 0
+		noStatus := 0
 		endedCount := 0
+		notSuccess := 0
 		for _, mi := range res.GetMinionJobInfos() {
 			if !mi.GetStatus().GetIsOk() {
 				c.App.Printf("%s: Encountered errors: (%s)\n", mi.GetAddr(), mi.GetStatus().GetFailureReason())
-				errorCount++
+				noStatus++
+				continue
 			}
 			switch mi.GetJobInfo().GetJobState() {
 			case proto.JobState_ENDED_SUCCESS:
@@ -329,21 +332,28 @@ func awaitJobCompletion(c *grumble.Context) error {
 			case proto.JobState_ENDED_FAILURE:
 				c.App.Printf("%s: Ended with failure\n", mi.GetAddr())
 				endedCount++
+				notSuccess++
 			case proto.JobState_ENDED_ABORTED:
 				c.App.Printf("%s: Ended as aborted\n", mi.GetAddr())
 				endedCount++
+				notSuccess++
 			case proto.JobState_ENDED_NEVER_RAN:
 				c.App.Printf("%s: Ended never ran\n", mi.GetAddr())
 				endedCount++
+				notSuccess++
 			}
 		}
-		remaining := len(res.GetMinionJobInfos()) - (errorCount + endedCount)
-		c.App.Printf("%d minions remaining\n", remaining)
+		remaining := len(res.GetMinionJobInfos()) - (noStatus + endedCount)
 		if remaining == 0 {
+			if notSuccess > 0 {
+				c.App.Printf("Job %s ended. One or more minions did not end successfully\n", jobId)
+			} else {
+				c.App.Printf("Job %s ended successfully\n", jobId)
+			}
 			break
 		}
 		if ctx.Err() != nil {
-			return fmt.Errorf("timeout occurred. desired number of minions not found")
+			return fmt.Errorf("timeout occurred. job has not ended yet")
 		}
 		time.Sleep(1 * time.Second)
 	}
