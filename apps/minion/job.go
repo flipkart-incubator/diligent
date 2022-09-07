@@ -365,22 +365,27 @@ func (j *Job) prepareWorkload(_ context.Context, protoWl *proto.WorkloadSpec) er
 	case "insert":
 		workload = work.NewInsertRowWorkload(assignedRange, rp)
 	case "insert-txn":
+		rp.EnableTxn = true
 		workload = work.NewInsertTxnWorkload(assignedRange, rp)
 	case "select-pk":
 		workload = work.NewSelectByPkRowWorkload(assignedRange, rp)
 	case "select-pk-txn":
+		rp.EnableTxn = true
 		workload = work.NewSelectByPkTxnWorkload(assignedRange, rp)
 	case "select-uk":
 		workload = work.NewSelectByUkRowWorkload(assignedRange, rp)
 	case "select-uk-txn":
+		rp.EnableTxn = true
 		workload = work.NewSelectByUkTxnWorkload(assignedRange, rp)
 	case "update":
 		workload = work.NewUpdateRowWorkload(assignedRange, rp)
 	case "update-txn":
+		rp.EnableTxn = true
 		workload = work.NewUpdateTxnWorkload(assignedRange, rp)
 	case "delete":
 		workload = work.NewDeleteRowWorkload(assignedRange, rp)
 	case "delete-txn":
+		rp.EnableTxn = true
 		workload = work.NewDeleteTxnWorkload(assignedRange, rp)
 	default:
 		return fmt.Errorf("invalid workload '%s'", workloadName)

@@ -56,7 +56,6 @@ func (wl *Workload) Start(duration time.Duration, ch chan *WorkloadResult) {
 
 	// Update metrics that reflect configured values
 	wl.runParams.Metrics.SetConfigMetricsForWorkload(wl.runParams.EnableTxn, wl.runParams.BatchSize, wl.runParams.Concurrency)
-	defer wl.runParams.Metrics.UnsetConfigMetricsForWorkload()
 
 	// Create a new context
 	if duration == 0 {
@@ -109,6 +108,7 @@ func (wl *Workload) handleCompletion(inCh chan *WorkerResult, outCh chan *Worklo
 
 	// Note that run has finished
 	wl.isRunEnded = true
+	wl.runParams.Metrics.UnsetConfigMetricsForWorkload()
 
 	outCh <- &WorkloadResult{
 		IsAborted:      wl.isAborted,
