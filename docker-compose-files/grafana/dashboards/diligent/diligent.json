@@ -95,7 +95,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(diligent_sql_basic_config_concurrency)",
+          "expr": "sum(diligent_config_concurrency)",
           "interval": "",
           "legendFormat": "Configured Concurrency",
           "queryType": "randomWalk",
@@ -103,7 +103,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(diligent_sql_basic_concurrency)",
+          "expr": "sum(diligent_concurrency)",
           "hide": false,
           "interval": "",
           "legendFormat": "Actual Concurrency",
@@ -198,9 +198,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "diligent_sql_basic_config_transactions_enabled",
+          "expr": "diligent_config_transaction_enabled",
           "interval": "",
-          "legendFormat": "Transactions Enabled-{{instance}}",
+          "legendFormat": "Txn Enabled-{{instance}}",
           "queryType": "randomWalk",
           "refId": "A"
         }
@@ -292,7 +292,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "diligent_sql_basic_config_operations_per_transaction",
+          "expr": "diligent_config_batch_size",
           "interval": "",
           "legendFormat": "Configured Batch Size-{{instance}}",
           "queryType": "randomWalk",
@@ -386,7 +386,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "diligent_sql_basic_db_connections",
+          "expr": "diligent_db_connections",
           "interval": "",
           "legendFormat": "{{label}}-{{instance}}",
           "queryType": "randomWalk",
@@ -497,7 +497,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (statement) (diligent_sql_basic_statement_duration_seconds_count)",
+          "expr": "sum by (statement) (diligent_statement_duration_seconds_count)",
           "interval": "",
           "legendFormat": "{{statement}}",
           "queryType": "randomWalk",
@@ -590,7 +590,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (statement) (rate(diligent_sql_basic_statement_duration_seconds_count[1m]))",
+          "expr": "sum by (statement) (rate(diligent_statement_duration_seconds_count[1m]))",
           "interval": "",
           "legendFormat": "{{statement}}",
           "queryType": "randomWalk",
@@ -683,7 +683,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (statement) (diligent_sql_basic_statement_failure)",
+          "expr": "sum by (statement) (diligent_statement_failure)",
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
@@ -693,7 +693,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (statement) (diligent_sql_basic_statement_affected_rows_mismatch)",
+          "expr": "sum by (statement) (diligent_statement_affected_rows_mismatch)",
           "hide": false,
           "interval": "",
           "legendFormat": "row mismatch {{statement}}s",
@@ -793,7 +793,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.999, sum by (le, statement) (rate(diligent_sql_basic_statement_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.999, sum by (le, statement) (rate(diligent_statement_duration_seconds_bucket[1m])))",
           "instant": false,
           "interval": "",
           "legendFormat": "{{statement}}",
@@ -888,7 +888,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le, statement) (rate(diligent_sql_basic_statement_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, statement) (rate(diligent_statement_duration_seconds_bucket[1m])))",
           "instant": false,
           "interval": "",
           "legendFormat": "{{statement}}",
@@ -983,7 +983,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(sum by (statement) (rate(diligent_sql_basic_statement_duration_seconds_sum[1m]))) / (sum by (statement) (rate(diligent_sql_basic_statement_duration_seconds_count[1m])))",
+          "expr": "(sum by (statement) (rate(diligent_statement_duration_seconds_sum[1m]))) / (sum by (statement) (rate(diligent_statement_duration_seconds_count[1m])))",
           "instant": false,
           "interval": "",
           "legendFormat": "{{statement}}",
@@ -1095,7 +1095,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "interval": "",
           "legendFormat": "Transaction Rate",
           "queryType": "randomWalk",
@@ -1188,7 +1188,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.999, sum by (le) (rate(diligent_sql_basic_transaction_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.999, sum by (le) (rate(diligent_transaction_duration_seconds_bucket[1m])))",
           "hide": false,
           "interval": "",
           "legendFormat": "p999",
@@ -1197,7 +1197,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(diligent_sql_basic_transaction_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(diligent_transaction_duration_seconds_bucket[1m])))",
           "interval": "",
           "legendFormat": "p99",
           "queryType": "randomWalk",
@@ -1205,7 +1205,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(diligent_sql_basic_transaction_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(diligent_transaction_duration_seconds_bucket[1m])))",
           "hide": false,
           "interval": "",
           "legendFormat": "p95",
@@ -1214,7 +1214,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.75, sum by (le) (rate(diligent_sql_basic_transaction_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.75, sum by (le) (rate(diligent_transaction_duration_seconds_bucket[1m])))",
           "hide": false,
           "interval": "",
           "legendFormat": "p75",
@@ -1223,7 +1223,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(diligent_sql_basic_transaction_duration_seconds_bucket[1m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(diligent_transaction_duration_seconds_bucket[1m])))",
           "hide": false,
           "interval": "",
           "legendFormat": "p50",
@@ -1232,7 +1232,7 @@
         },
         {
           "exemplar": true,
-          "expr": "(sum (rate(diligent_sql_basic_transaction_duration_seconds_sum[1m]))) / (sum (rate(diligent_sql_basic_transaction_duration_seconds_count[1m])))",
+          "expr": "(sum (rate(diligent_transaction_duration_seconds_sum[1m]))) / (sum (rate(diligent_transaction_duration_seconds_count[1m])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Mean",
@@ -1326,7 +1326,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count{statement=\"begin\"}[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count{statement=\"begin\"}[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "interval": "",
           "legendFormat": "begin/txn",
           "queryType": "randomWalk",
@@ -1334,7 +1334,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count{statement=\"commit\"}[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count{statement=\"commit\"}[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "commit/txn",
@@ -1343,7 +1343,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count{statement=\"select\"}[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count{statement=\"select\"}[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "select/txn",
@@ -1352,7 +1352,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count{statement=\"insert\"}[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count{statement=\"insert\"}[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "insert/txn",
@@ -1361,7 +1361,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count{statement=\"update\"}[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count{statement=\"update\"}[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "update/txn",
@@ -1370,7 +1370,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count{statement=\"delete\"}[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count{statement=\"delete\"}[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "delete/txn",
@@ -1379,7 +1379,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(diligent_sql_basic_statement_duration_seconds_count[1m])) / sum(rate(diligent_sql_basic_transaction_duration_seconds_count[1m]))",
+          "expr": "sum(rate(diligent_statement_duration_seconds_count[1m])) / sum(rate(diligent_transaction_duration_seconds_count[1m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "total/txn",

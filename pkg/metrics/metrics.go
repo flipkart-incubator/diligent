@@ -29,40 +29,35 @@ func NewDiligentMetrics(metricsAddr string) *DiligentMetrics {
 
 	dm.configTxnsEnabledGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
-			Name:      "config_transactions_enabled",
+			Namespace: "diligent",
+			Name:      "config_transaction_enabled",
 			Help:      "Set to 0 or 1 for transactions disabled, enabled respectively",
 		})
 
 	dm.configOpsPerTxnGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
-			Name:      "config_operations_per_transaction",
-			Help:      "Configured number of operations per transaction",
+			Namespace: "diligent",
+			Name:      "config_batch_size",
+			Help:      "Configured batch size (ops / txn)",
 		})
 
 	dm.configConcurrencyGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "config_concurrency",
 			Help:      "Configured concurrency",
 		})
 
 	dm.concurrencyGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "concurrency",
 			Help:      "Actual number of concurrent workers",
 		})
 
 	dm.stmtDurationHistVec = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "statement_duration_seconds",
 			Help:      "Histogram of the duration taken to execute SQL statements",
 			Buckets:   prometheus.ExponentialBuckets(0.000001, 2, 30),
@@ -70,8 +65,7 @@ func NewDiligentMetrics(metricsAddr string) *DiligentMetrics {
 
 	dm.txnDurationHist = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "transaction_duration_seconds",
 			Help:      "Histogram of the duration of SQL transactions",
 			Buckets:   prometheus.ExponentialBuckets(0.000001, 2, 30),
@@ -79,24 +73,21 @@ func NewDiligentMetrics(metricsAddr string) *DiligentMetrics {
 
 	dm.stmtFailCounterVec = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "statement_failure",
 			Help:      "Counter for failed SQL statements",
 		}, []string{"statement"})
 
 	dm.stmtRowMismatchCounterVec = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "statement_affected_rows_mismatch",
 			Help:      "Counter for SQL statements with mismatch in affected number of rows",
 		}, []string{"statement"})
 
 	dm.dbConnectionsGaugeVec = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "diligent_sql",
-			Subsystem: "basic",
+			Namespace: "diligent",
 			Name:      "db_connections",
 			Help:      "Number of db connections - max open, open, in use and idle",
 		}, []string{"label"})
