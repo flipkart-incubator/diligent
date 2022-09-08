@@ -19,6 +19,7 @@ var grumbleApp = grumble.New(&grumble.Config{
 
 	Flags: func(f *grumble.Flags) {
 		f.String("b", "boss", "", "host[:port] of boss server")
+		f.String("p", "prom", "", "host[:port] of prometheus server")
 	},
 })
 
@@ -26,6 +27,11 @@ func onGrumbleInit(a *grumble.App, flags grumble.FlagMap) error {
 	bossAddr := flags.String("boss")
 	if bossAddr == "" {
 		return fmt.Errorf("please provide a valid address for the boss server using -b or --boss")
+	}
+
+	promAddr := flags.String("prom")
+	if promAddr == "" {
+		return fmt.Errorf("please provide a valid address for the prometheus server using -p or --prom")
 	}
 	return nil
 }

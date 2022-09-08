@@ -33,6 +33,15 @@ services:
     networks:
       - diligent
 
+  minion1:
+    build:
+      context: .
+      dockerfile: Minion.Dockerfile
+    image: diligent/minion:latest
+    command: ["/diligent/minion", "--boss", "boss", "--advertise-addr", "minion1"]
+    networks:
+      - diligent
+
   boss:
     build:
       context: .
@@ -48,7 +57,7 @@ services:
       context: .
       dockerfile: Shell.Dockerfile
     image: diligent/shell:latest
-    command: ["/diligent/shell", "--boss", "boss"]
+    command: ["/diligent/shell", "--boss", "boss", "--prom", "http://prometheus:9090"]
     stdin_open: true
     tty: true
     networks:
