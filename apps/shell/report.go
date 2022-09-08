@@ -54,7 +54,7 @@ func reportSave(c *grumble.Context) error {
 
 	chs := make([]components.Charter, 0)
 	for _, p := range panels {
-		ch := newLineChart(p)
+		ch := newLineChart(p, startTime, endTime)
 		for _, q := range p.queries {
 			metrics, err := promQuery(promAddr, q.query, startTime, endTime, stepSize)
 			if err != nil {
@@ -205,17 +205,20 @@ func promQuery(server, query string, startTime, endTime time.Time, step time.Dur
 	return metrics, nil
 }
 
-func newLineChart(panel Panel) *charts.Line {
+func newLineChart(panel Panel, startTime, endTime time.Time) *charts.Line {
 	lineChart := charts.NewLine()
 	lineChart.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{Title: panel.title}),
 		charts.WithXAxisOpts(opts.XAxis{
 			Name: "Time",
 			Type: "time",
+			Min:  float64(startTime.UnixMilli()),
+			Max:  float64(endTime.UnixMilli()),
 		}),
 		charts.WithYAxisOpts(opts.YAxis{
 			Name: panel.yAxisLabel,
 			Type: "value",
+			Min:  0,
 		}),
 		charts.WithLegendOpts(opts.Legend{
 			Show: true,
