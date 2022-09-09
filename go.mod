@@ -3,9 +3,11 @@ module github.com/flipkart-incubator/diligent
 go 1.15
 
 require (
+	github.com/brianstrauch/cobra-shell v0.4.0
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/desertbit/grumble v1.1.1
 	github.com/fatih/color v1.12.0
+	github.com/ghodss/yaml v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
@@ -17,8 +19,10 @@ require (
 	github.com/prometheus/common v0.26.0
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.9.0
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

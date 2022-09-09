@@ -1,0 +1,89 @@
+info:
+    name: basic-dml
+    version: 0.0.0
+    question: How is insert performance affect by record size?
+    description: |
+        Runs insert jobs for a range of record sizes 1K, 10K, 100K, 1000k bytes
+        For each run the total data size is 10GB
+        Each run inserts data into a separate table, no deletes are carried out
+        Uses standalone insert statements, without transactions
+
+env:
+    - dbDriver
+    - dbUrl
+    - minionCount
+
+params:
+    coolDownDuration: 120
+
+setup:
+    sql: |
+        DROP TABLE IF EXISTS t1k;    
+        DROP TABLE IF EXISTS t10k;    
+        DROP TABLE IF EXISTS t100k;    
+        DROP TABLE IF EXISTS t1000k;    
+        CREATE TABLE t1k
+        (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(1000) NOT NULL,
+            PRIMARY KEY (pk)
+        );
+        CREATE TABLE t10k
+        (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(10000) NOT NULL,
+            PRIMARY KEY (pk)
+        );
+        CREATE TABLE t100k
+        (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(100000) NOT NULL,
+            PRIMARY KEY (pk)
+        );
+        CREATE TABLE t1000k
+        (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(1000000) NOT NULL,
+            PRIMARY KEY (pk)
+        );
+
+    diligent:
+        - dataspec create --num-recs 10000000 --rec-size 1000 1k.data
+        - dataspec create --num-recs 1000000 --rec-size 10000 10k.data
+        - dataspec create --num-recs 100000 --rec-size 100000 100k.data
+        - dataspec create --num-recs 10000 --rec-size 1000000 1000k.data
+        - minion await-count {{env.minionCount}}
+
+experiment:
+    - job run --dataspec-file 1k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1k
+    - job run --dataspec-file 10k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t10k
+    - job run --dataspec-file 100k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t100k
+    - job run --dataspec-file 1000k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1000k
+
+epilogue:
+    - experiment save-details --name {{info.name}}
+    - experiment save-metrics --name {{info.name}}

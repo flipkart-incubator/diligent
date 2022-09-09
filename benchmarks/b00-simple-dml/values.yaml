@@ -1,0 +1,10 @@
+env:
+  dbDriver: mysql
+  dbUrl: tester:password@tcp(10.0.0.17:3066)/diligent
+  minionCount: 4
+
+overrides:
+  numRecs: 100000
+  selectDuration: 300
+  updateDuration: 300
+

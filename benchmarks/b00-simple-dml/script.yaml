@@ -1,0 +1,59 @@
+name: basic-dml
+
+info:
+    version: 0.0.0
+    question: What are the latencies and throughput of standalone DML commands?
+    description: |
+        Runs four separate jobs that issue simple insert, select, update and delete dml commands without any transactions
+        Insert and delete run for all the records
+        Select and update run for a fixed duration
+
+env:
+    - dbDriver
+    - dbUrl
+    - minionCount
+
+params:
+    numRecs: 1000000
+    recSize: 1024
+    selectDuration: 1800
+    updateDuration: 1800
+    coolDownDuration: 120
+
+setup:
+    sql:
+        - DROP TABLE IF EXISTS baseline;
+        - | 
+            CREATE TABLE baseline
+            (
+                pk        varchar(32)    NOT NULL,
+                uniq      varchar(32)    NOT NULL,
+                small_grp varchar(32)    NOT NULL,
+                large_grp varchar(32)    NOT NULL,
+                fixed_val varchar(32)    NOT NULL,
+                seq_num   int            NOT NULL,
+                ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                payload   varchar(10240) NOT NULL,
+                PRIMARY KEY (pk)
+            );
+
+    diligent:
+        - dataspec create --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
+        - minion await-count {{.Env.minionCount}}
+        - set post-job-cooldown {{.Params.coolDownDuration}}
+
+experiment:
+    - experiment start
+    - job run --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} insert baseline
+    - job await-completion
+    - job run --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --duration {{.Params.updateDuration}} update baseline
+    - job await-completion
+    - job run --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --duration {{.Params.selectDuration}} select-pk baseline
+    - job await-completion
+    - job run --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} delete baseline
+    - job await-completion
+    - experiment end
+
+conclusion:
+    - experiment save-details -o {{.Name}}.txt
+    - experiment save-metrics -o {{.Name}}.html
