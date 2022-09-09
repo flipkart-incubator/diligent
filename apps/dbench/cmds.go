@@ -38,6 +38,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	runScriptCmd.Flags().Bool("dry-run", false, "perform a dry run")
 	rootCmd.AddCommand(runScriptCmd)
 }
 
@@ -53,6 +54,10 @@ func runScript(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		panic(err)
 	}
+	dryRun, err := cmd.Flags().GetBool("dry-run")
+	if err != nil {
+		panic(err)
+	}
 
 	bms, err := LoadScript(scriptFileName)
 	if err != nil {
@@ -64,7 +69,11 @@ func runScript(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	executor := NewExecutor(bms, bmv)
+	executor, err := NewExecutor(bms, bmv, dryRun)
+	if err != nil {
+		return err
+	}
+
 	err = executor.Execute()
 	if err != nil {
 		return err
