@@ -64,10 +64,10 @@ func runScript(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = bms.Execute(bmv)
+	executor := NewExecutor(bms, bmv)
+	err = executor.Execute()
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
