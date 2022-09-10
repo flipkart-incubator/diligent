@@ -5,21 +5,25 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"io"
+	"os/exec"
 	"strings"
 	"text/template"
 	"time"
 )
 
 const (
-	sqlTimeout = 5 * time.Second
+	sqlTimeout  = 5 * time.Second
+	shellBinary = "shell"
 )
 
 type Executor struct {
-	script       *BenchmarkScript
-	values       *BenchmarkValues
-	replacements *Replacements
-	db           *sql.DB
-	dryRun       bool
+	script           *BenchmarkScript
+	values           *BenchmarkValues
+	replacements     *Replacements
+	db               *sql.DB
+	dryRun           bool
+	coolDownDuration time.Duration
 }
 
 func NewExecutor(script *BenchmarkScript, values *BenchmarkValues, dryRun bool) (*Executor, error) {
@@ -52,6 +56,16 @@ func NewExecutor(script *BenchmarkScript, values *BenchmarkValues, dryRun bool) 
 		return nil, fmt.Errorf("required env not found: %s", "dbUrl")
 	}
 
+	// Get cooldown seconds
+	coolDownDurationStr := replacements.Params["coolDownDuration"]
+	if coolDownDurationStr == "" {
+		return nil, fmt.Errorf("required env not found: %s", "coolDownDuration")
+	}
+	coolDownDuration, err := time.ParseDuration(coolDownDurationStr)
+	if err != nil {
+		return nil, err
+	}
+
 	// Open new connection
 	db, err := sql.Open(dbDriver, dbUrl)
 	if err != nil {
@@ -59,11 +73,12 @@ func NewExecutor(script *BenchmarkScript, values *BenchmarkValues, dryRun bool) 
 	}
 
 	return &Executor{
-		script:       script,
-		values:       values,
-		replacements: replacements,
-		db:           db,
-		dryRun:       dryRun,
+		script:           script,
+		values:           values,
+		replacements:     replacements,
+		db:               db,
+		dryRun:           dryRun,
+		coolDownDuration: coolDownDuration,
 	}, nil
 }
 
@@ -104,6 +119,7 @@ func (e *Executor) Execute() error {
 	fmt.Printf("\nStarting Execution Phase:\n")
 	fmt.Printf("Executing Diligent commands:\n")
 	for _, cmd := range e.script.Experiment {
+		e.executeCoolDown()
 		err := e.executeDiligentCmd(cmd)
 		if err != nil {
 			return err
@@ -170,18 +186,24 @@ func getParamValues(script *BenchmarkScript, values *BenchmarkValues) (map[strin
 	return params, nil
 }
 
+func (e *Executor) executeCoolDown() {
+	fmt.Printf("Cooldown for %v seconds at %s..\n", e.coolDownDuration, time.Now().Format(time.Stamp))
+	time.Sleep(e.coolDownDuration)
+	fmt.Printf("Proceeding at %s..\n", time.Now().Format(time.Stamp))
+}
+
 func (e *Executor) executeSQLCmd(cmdTmplStr string) error {
-	cmdTmpl, err := template.New("t1").Parse(cmdTmplStr)
+	tmpl, err := template.New("t1").Parse(cmdTmplStr)
 	if err != nil {
 		return err
 	}
 	var sb strings.Builder
-	err = cmdTmpl.Execute(&sb, e.replacements)
+	err = tmpl.Execute(&sb, e.replacements)
 	if err != nil {
 		return err
 	}
 	cmd := sb.String()
-	fmt.Println("sql>>", cmd)
+	fmt.Println(">>", "sql", cmd)
 
 	if !e.dryRun {
 		sqlCtx, sqlCancel := context.WithTimeout(context.Background(), sqlTimeout)
@@ -194,8 +216,8 @@ func (e *Executor) executeSQLCmd(cmdTmplStr string) error {
 	return nil
 }
 
-func (e *Executor) executeDiligentCmd(cmd string) error {
-	tmpl, err := template.New("t1").Parse(cmd)
+func (e *Executor) executeDiligentCmd(cmdTmplStr string) error {
+	tmpl, err := template.New("t1").Parse(cmdTmplStr)
 	if err != nil {
 		return err
 	}
@@ -204,6 +226,42 @@ func (e *Executor) executeDiligentCmd(cmd string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("dcli>>", sb.String())
+	cmdStr := sb.String()
+	fmt.Println(">>", shellBinary, cmdStr)
+
+	if !e.dryRun {
+		tokens := strings.Split(cmdStr, " ")
+		cmd := exec.Command(shellBinary, tokens...)
+
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
+
+		outBytes, _ := io.ReadAll(stdout)
+		errBytes, _ := io.ReadAll(stderr)
+		outText := string(outBytes)
+		errText := string(errBytes)
+		fmt.Println(outText)
+		err = cmd.Wait()
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.ExitCode() != 0 {
+				fmt.Println(errText)
+				return fmt.Errorf("command failed with error code: %d", exitErr.ExitCode())
+			}
+		} else {
+			return err
+		}
+	}
+
 	return nil
 }
