@@ -13,15 +13,15 @@ func init() {
 	}
 	grumbleApp.AddCommand(shellCmd)
 
-	shellVersionCmd := &grumble.Command{
-		Name: "version",
-		Help: "get version information about the shell",
-		Run:  shellVersion,
+	shellInfoCmd := &grumble.Command{
+		Name: "info",
+		Help: "get information about the shell",
+		Run:  shellInfo,
 	}
-	shellCmd.AddCommand(shellVersionCmd)
+	shellCmd.AddCommand(shellInfoCmd)
 }
 
-func shellVersion(c *grumble.Context) error {
+func shellInfo(c *grumble.Context) error {
 	c.App.Printf("go-version : %s\n", buildinfo.GoVersion)
 	c.App.Printf("commit-hash: %s\n", buildinfo.CommitHash)
 	c.App.Printf("build-time : %s\n", buildinfo.BuildTime)

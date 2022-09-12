@@ -25,15 +25,15 @@ func init() {
 	}
 	grumbleApp.AddCommand(bossCmd)
 
-	bossPingCmd := &grumble.Command{
-		Name: "ping",
-		Help: "ping the boss",
-		Run:  bossPing,
+	bossInfoCmd := &grumble.Command{
+		Name: "info",
+		Help: "show boss info",
+		Run:  bossInfo,
 	}
-	bossCmd.AddCommand(bossPingCmd)
+	bossCmd.AddCommand(bossInfoCmd)
 }
 
-func bossPing(c *grumble.Context) error {
+func bossInfo(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {

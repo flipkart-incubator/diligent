@@ -34,30 +34,30 @@ func init() {
 			a.String("workload", "name of workload to run [insert,insert-txn,select,select-txn,update,update-txn,delete,delete-txn")
 			a.String("table", "name of the table to run the workload on")
 		},
-		Run: prepareJob,
+		Run: jobPrepare,
 	}
 	jobCmd.AddCommand(jobPrepareCmd)
 
 	jobRunCmd := &grumble.Command{
 		Name: "run",
 		Help: "Start the execution of the current job",
-		Run:  runJob,
+		Run:  jobRun,
 	}
 	jobCmd.AddCommand(jobRunCmd)
 
 	jobAbortCmd := &grumble.Command{
 		Name: "abort",
 		Help: "Abort the execution of the current job",
-		Run:  abortJob,
+		Run:  jobAbort,
 	}
 	jobCmd.AddCommand(jobAbortCmd)
 
-	jobQueryCmd := &grumble.Command{
-		Name: "query",
-		Help: "Query the status of a job",
-		Run:  queryJob,
+	jobInfoCmd := &grumble.Command{
+		Name: "info",
+		Help: "Show current job information",
+		Run:  jobInfo,
 	}
-	jobCmd.AddCommand(jobQueryCmd)
+	jobCmd.AddCommand(jobInfoCmd)
 
 	jobAwaitCmd := &grumble.Command{
 		Name: "await-completion",
@@ -65,12 +65,12 @@ func init() {
 		Flags: func(f *grumble.Flags) {
 			f.Duration("t", "timeout", 10*time.Second, "wait timeout")
 		},
-		Run: awaitJobCompletion,
+		Run: jobAwaitCompletion,
 	}
 	jobCmd.AddCommand(jobAwaitCmd)
 }
 
-func prepareJob(c *grumble.Context) error {
+func jobPrepare(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 
 	// Job name param
@@ -195,7 +195,7 @@ func prepareJob(c *grumble.Context) error {
 	return nil
 }
 
-func runJob(c *grumble.Context) error {
+func jobRun(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -226,7 +226,7 @@ func runJob(c *grumble.Context) error {
 	return nil
 }
 
-func abortJob(c *grumble.Context) error {
+func jobAbort(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -257,7 +257,7 @@ func abortJob(c *grumble.Context) error {
 	return nil
 }
 
-func queryJob(c *grumble.Context) error {
+func jobInfo(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -288,7 +288,7 @@ func queryJob(c *grumble.Context) error {
 	return nil
 }
 
-func awaitJobCompletion(c *grumble.Context) error {
+func jobAwaitCompletion(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {

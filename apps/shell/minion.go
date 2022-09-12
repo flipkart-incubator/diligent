@@ -23,7 +23,7 @@ func init() {
 		Args: func(a *grumble.Args) {
 			a.String("minion-addr", "host[:port] of minion server")
 		},
-		Run: registerMinion,
+		Run: minionRegister,
 	}
 	minionCmd.AddCommand(minionRegisterCmd)
 
@@ -33,21 +33,21 @@ func init() {
 		Args: func(a *grumble.Args) {
 			a.String("minion-addr", "host[:port] of minion server")
 		},
-		Run: unregisterMinion,
+		Run: minionUnregister,
 	}
 	minionCmd.AddCommand(minionUnregisterCmd)
 
-	minionShowCmd := &grumble.Command{
-		Name: "show",
-		Help: "show details of minions registered with the boss",
+	minionInfoCmd := &grumble.Command{
+		Name: "info",
+		Help: "show info of minions registered with the boss",
 		Flags: func(f *grumble.Flags) {
 			f.Bool("b", "build-info", false, "show build information")
 			f.Bool("p", "process-info", false, "show process information")
 			f.Bool("j", "job-info", false, "show job information")
 		},
-		Run: showMinions,
+		Run: minionInfo,
 	}
-	minionCmd.AddCommand(minionShowCmd)
+	minionCmd.AddCommand(minionInfoCmd)
 
 	minionAwaitCmd := &grumble.Command{
 		Name: "await-count",
@@ -58,12 +58,12 @@ func init() {
 		Args: func(a *grumble.Args) {
 			a.Int("num-minions", "number of minions to wait for")
 		},
-		Run: awaitMinions,
+		Run: minionAwaitCount,
 	}
 	minionCmd.AddCommand(minionAwaitCmd)
 }
 
-func registerMinion(c *grumble.Context) error {
+func minionRegister(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -92,7 +92,7 @@ func registerMinion(c *grumble.Context) error {
 	return nil
 }
 
-func unregisterMinion(c *grumble.Context) error {
+func minionUnregister(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -121,7 +121,7 @@ func unregisterMinion(c *grumble.Context) error {
 	return nil
 }
 
-func showMinions(c *grumble.Context) error {
+func minionInfo(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -226,7 +226,7 @@ func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
 	}
 }
 
-func awaitMinions(c *grumble.Context) error {
+func minionAwaitCount(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
