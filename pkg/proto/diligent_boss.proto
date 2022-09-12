@@ -71,8 +71,7 @@ message BossPrepareJobRequest {
 
 message BossPrepareJobResponse {
   GeneralStatus status = 1;
-  string job_id = 2;
-  repeated MinionStatus minion_statuses = 3;
+  repeated MinionStatus minion_statuses = 2;
 }
 
 message BossRunJobRequest {

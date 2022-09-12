@@ -70,10 +70,10 @@ func (m *MinionManager) GetMinionStatus(ctx context.Context, ch chan *proto.Mini
 	}
 }
 
-func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobId string,
+func (m *MinionManager) PrepareJobOnMinion(ctx context.Context, jobName string,
 	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec, ch chan *proto.MinionStatus) {
 
-	res, err := m.client.PrepareJob(ctx, jobId, dataSpec, dbSpec, wlSpec)
+	res, err := m.client.PrepareJob(ctx, jobName, dataSpec, dbSpec, wlSpec)
 	if err != nil {
 		ch <- &proto.MinionStatus{
 			Addr: m.addr,

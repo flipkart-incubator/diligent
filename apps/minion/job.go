@@ -63,7 +63,7 @@ func (j JobState) ToProto() proto.JobState {
 }
 
 type JobInfo struct {
-	id             string
+	name           string
 	state          JobState
 	spec           *proto.JobSpec
 	prepareTime    time.Time
@@ -78,7 +78,7 @@ func (j *JobInfo) ToProto() *proto.JobInfo {
 		return nil
 	}
 	return &proto.JobInfo{
-		JobId:          j.id,
+		JobName:        j.name,
 		JobSpec:        j.spec,
 		JobState:       j.state.ToProto(),
 		PrepareTime:    j.prepareTime.Format(time.UnixDate),
@@ -115,7 +115,7 @@ type WorkloadContext struct {
 type Job struct {
 	mut sync.Mutex
 
-	id string
+	name string
 
 	spec     *proto.JobSpec
 	data     *DataContext
@@ -131,11 +131,11 @@ type Job struct {
 	nonFatalErrors int
 }
 
-func PrepareJob(ctx context.Context, id string, spec *proto.JobSpec, metrics *metrics.DiligentMetrics) (*Job, error) {
-	log.Infof("PrepareJob(%s)", id)
+func PrepareJob(ctx context.Context, spec *proto.JobSpec, metrics *metrics.DiligentMetrics) (*Job, error) {
+	log.Infof("PrepareJob(%s)", spec.GetJobName())
 
 	job := &Job{
-		id:          id,
+		name:        spec.GetJobName(),
 		state:       Prepared,
 		spec:        spec,
 		data:        nil,
@@ -163,14 +163,14 @@ func PrepareJob(ctx context.Context, id string, spec *proto.JobSpec, metrics *me
 		return nil, err
 	}
 
-	log.Infof("PrepareJob(%s) completed successfully", id)
+	log.Infof("PrepareJob(%s) completed successfully", spec.GetJobName())
 	return job, nil
 }
 
-func (j *Job) Id() string {
+func (j *Job) Name() string {
 	j.mut.Lock()
 	defer j.mut.Unlock()
-	return j.id
+	return j.name
 }
 
 func (j *Job) State() JobState {
@@ -183,7 +183,7 @@ func (j *Job) Info() *JobInfo {
 	j.mut.Lock()
 	defer j.mut.Unlock()
 	return &JobInfo{
-		id:             j.id,
+		name:           j.name,
 		state:          j.state,
 		spec:           j.spec,
 		prepareTime:    j.prepareTime,
@@ -195,7 +195,7 @@ func (j *Job) Info() *JobInfo {
 }
 
 func (j *Job) Run(ctx context.Context) (chan int, error) {
-	log.Infof("Run(%s)", j.id)
+	log.Infof("Run(%s)", j.name)
 	j.mut.Lock()
 	defer j.mut.Unlock()
 
@@ -210,21 +210,21 @@ func (j *Job) Run(ctx context.Context) (chan int, error) {
 
 	go j.runWorkload(notifyCh)
 
-	log.Infof("Run(%s) initiated successfully", j.id)
+	log.Infof("Run(%s) initiated successfully", j.name)
 	return notifyCh, nil
 }
 
 func (j *Job) runWorkload(ch chan int) {
 	j.mut.Lock()
 	j.mut.Unlock()
-	log.Infof("Starting workload for job %s...", j.id)
+	log.Infof("Starting workload for job %s...", j.name)
 
 	resultCh := make(chan *work.WorkloadResult)
 	j.workload.workload.Start(time.Duration(j.workload.durationSec)*time.Second, resultCh)
 
-	log.Infof("Waiting for workload to complete for job %s...", j.id)
+	log.Infof("Waiting for workload to complete for job %s...", j.name)
 	result := <-resultCh
-	log.Infof("Workload completed for job %s. Result=%v", j.id, result)
+	log.Infof("Workload completed for job %s. Result=%v", j.name, result)
 
 	j.mut.Lock()
 	defer j.mut.Unlock()
@@ -242,7 +242,7 @@ func (j *Job) runWorkload(ch chan int) {
 		j.state = EndedSuccess
 	}
 
-	log.Infof("Cleaning runtime state of job %s...", j.id)
+	log.Infof("Cleaning runtime state of job %s...", j.name)
 	j.data = nil
 	if j.db != nil {
 		j.db.db.Close()
@@ -255,7 +255,7 @@ func (j *Job) runWorkload(ch chan int) {
 }
 
 func (j *Job) Abort(ctx context.Context) error {
-	log.Infof("Abort(%s)", j.id)
+	log.Infof("Abort(%s)", j.name)
 	j.mut.Lock()
 	defer j.mut.Unlock()
 
@@ -268,7 +268,7 @@ func (j *Job) Abort(ctx context.Context) error {
 		j.workload.workload.Abort()
 	}
 
-	log.Infof("Abort(%s) completed successfully", j.id)
+	log.Infof("Abort(%s) completed successfully", j.name)
 	return nil
 }
 

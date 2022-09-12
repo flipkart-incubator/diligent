@@ -97,7 +97,7 @@ func (m *MinionClient) Ping(ctx context.Context) (*proto.MinionPingResponse, err
 	return res, nil
 }
 
-func (m *MinionClient) PrepareJob(ctx context.Context, jobId string,
+func (m *MinionClient) PrepareJob(ctx context.Context, jobName string,
 	dataSpec *proto.DataSpec, dbSpec *proto.DBSpec, wlSpec *proto.WorkloadSpec) (*proto.MinionPrepareJobResponse, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
@@ -112,8 +112,8 @@ func (m *MinionClient) PrepareJob(ctx context.Context, jobId string,
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
 	res, err := grpcClient.PrepareJob(grpcCtx, &proto.MinionPrepareJobRequest{
-		JobId: jobId,
 		JobSpec: &proto.JobSpec{
+			JobName:      jobName,
 			DataSpec:     dataSpec,
 			DbSpec:       dbSpec,
 			WorkloadSpec: wlSpec,

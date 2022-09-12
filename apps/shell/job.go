@@ -22,6 +22,7 @@ func init() {
 		Name: "prepare",
 		Help: "Prepare to run a job",
 		Flags: func(f *grumble.Flags) {
+			f.String("n", "name", "", "name of the job")
 			f.String("s", "dataspec-file", "", "name of the dataspec file")
 			f.String("r", "db-driver", "", "db driver to use")
 			f.String("d", "db-url", "", "db connection url")
@@ -71,6 +72,12 @@ func init() {
 
 func prepareJob(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
+
+	// Job name param
+	jobName := c.Flags.String("name")
+	if jobName == "" {
+		return fmt.Errorf("please specify a name for the job")
+	}
 
 	// Dataspec param
 	dataspecFileName := c.Flags.String("dataspec-file")
@@ -151,6 +158,7 @@ func prepareJob(c *grumble.Context) error {
 	reqStart := time.Now()
 	res, err := bossClient.PrepareJob(grpcCtx, &proto.BossPrepareJobRequest{
 		JobSpec: &proto.JobSpec{
+			JobName:  jobName,
 			DataSpec: proto.DataSpecToProto(dataSpec),
 			DbSpec: &proto.DBSpec{
 				Driver: dbDriver,
@@ -184,7 +192,6 @@ func prepareJob(c *grumble.Context) error {
 		return fmt.Errorf(res.GetStatus().GetFailureReason())
 	}
 	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
-	c.App.Printf("JobId=%s\n", res.GetJobId())
 	return nil
 }
 

@@ -23,7 +23,6 @@ type BossServer struct {
 	listenAddr string
 	pid        string
 	startTime  time.Time
-	nextJobNum int
 
 	registry *MinionRegistry
 }
@@ -33,7 +32,6 @@ func NewBossServer(listenAddr string) *BossServer {
 		listenAddr: listenAddr,
 		pid:        idgen.GenerateId16(),
 		startTime:  time.Now(),
-		nextJobNum: 1,
 		registry:   NewMinionRegistry(),
 	}
 }
@@ -164,10 +162,6 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	// Generate the ID for this job
-	jobId := s.getNextJobId()
-	log.Infof("PrepareJob(): Assigning JobId=%s", jobId)
-
 	// Partition the data among the number of minions
 	dataSpec := proto.DataSpecFromProto(in.GetJobSpec().GetDataSpec())
 	numRecs := dataSpec.KeyGenSpec.NumKeys()
@@ -210,7 +204,7 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 			BatchSize:     in.GetJobSpec().GetWorkloadSpec().GetBatchSize(),
 		}
 
-		go mm.PrepareJobOnMinion(ctx, jobId, in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec, ch)
+		go mm.PrepareJobOnMinion(ctx, in.GetJobSpec().GetJobName(), in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec, ch)
 		i++
 	}
 
@@ -234,7 +228,6 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 	log.Infof("PrepareJob(): completed")
 	return &proto.BossPrepareJobResponse{
 		Status:         &overallStatus,
-		JobId:          jobId,
 		MinionStatuses: minionStatuses,
 	}, nil
 }
@@ -349,10 +342,4 @@ func (s *BossServer) QueryJob(ctx context.Context, in *proto.BossQueryJobRequest
 		Status:         &overallStatus,
 		MinionJobInfos: minionJobInfos,
 	}, nil
-}
-
-func (s *BossServer) getNextJobId() string {
-	id := fmt.Sprintf("%d", s.nextJobNum)
-	s.nextJobNum++
-	return id
 }

@@ -192,7 +192,7 @@ func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
 	}
 	ds := proto.DataSpecFromProto(ji.GetJobSpec().GetDataSpec())
 	c.App.Printf("\n")
-	c.App.Printf("\tjob-id:    %s\n", ji.GetJobId())
+	c.App.Printf("\tjob-name:  %s\n", ji.GetJobName())
 	c.App.Printf("\tjob-state: %s\n", ji.GetJobState())
 	c.App.Printf("\tprepare-time: %s\n", ji.GetPrepareTime())
 	c.App.Printf("\trun-time:     %s\n", ji.GetRunTime())
@@ -220,9 +220,9 @@ func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
 			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
 			mi.GetProcessInfo().GetUptime())
 	} else {
-		c.App.Printf("[version=%s, pid=%s, uptime=%s, jobId=%s, jobState=%s]\n",
+		c.App.Printf("[version=%s, pid=%s, uptime=%s, jobName=%s, jobState=%s]\n",
 			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
-			mi.GetProcessInfo().GetUptime(), mi.GetJobInfo().GetJobId(), mi.GetJobInfo().GetJobState())
+			mi.GetProcessInfo().GetUptime(), mi.GetJobInfo().GetJobName(), mi.GetJobInfo().GetJobState())
 	}
 }
 

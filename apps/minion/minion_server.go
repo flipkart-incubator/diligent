@@ -149,13 +149,13 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 		return &proto.MinionPrepareJobResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: fmt.Sprintf("job with id=%s is currently running", s.job.Id()),
+				FailureReason: fmt.Sprintf("job with name=%s is currently running", s.job.Name()),
 			},
 			Pid: s.pid,
 		}, nil
 	}
 
-	job, err := PrepareJob(ctx, in.GetJobId(), in.GetJobSpec(), s.metrics)
+	job, err := PrepareJob(ctx, in.GetJobSpec(), s.metrics)
 	if err != nil {
 		return &proto.MinionPrepareJobResponse{
 			Status: &proto.GeneralStatus{
@@ -168,7 +168,7 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 	s.job = job
 
 	// Preparation was successful
-	log.Infof("GRPC: PrepareJob(jobId=%s) completed successfully", in.GetJobId())
+	log.Infof("GRPC: PrepareJob(jobName=%s) completed successfully", in.GetJobSpec().GetJobName())
 	return &proto.MinionPrepareJobResponse{
 		Status: &proto.GeneralStatus{
 			IsOk:          true,
