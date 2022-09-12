@@ -132,8 +132,7 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 		},
 		ProcessInfo: &proto.ProcessInfo{
 			Pid:       s.pid,
-			StartTime: s.startTime.Format(time.UnixDate),
-			Uptime:    time.Since(s.startTime).String(),
+			StartTime: s.startTime.UnixMilli(),
 		},
 		JobInfo: protoJobInfo,
 	}, nil

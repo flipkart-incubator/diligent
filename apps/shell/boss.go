@@ -56,8 +56,9 @@ func bossInfo(c *grumble.Context) error {
 		c.App.Printf("GoVersion : %s\n", res.GetBuildInfo().GetGoVersion())
 		c.App.Printf("BuildTime : %s\n", res.GetBuildInfo().GetBuildTime())
 		c.App.Printf("Pid       : %s\n", res.GetProcessInfo().GetPid())
-		c.App.Printf("StartTime : %s\n", res.GetProcessInfo().GetStartTime())
-		c.App.Printf("Uptime    : %s\n", res.GetProcessInfo().GetUptime())
+		startTime := time.UnixMilli(res.GetProcessInfo().GetStartTime())
+		upTime := time.Since(startTime).Round(time.Second)
+		c.App.Printf("StartTime : %s (%s ago)\n", startTime.Format(time.UnixDate), upTime.String())
 	}
 	return nil
 }

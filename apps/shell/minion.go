@@ -179,10 +179,13 @@ func showMinionProcessInfo(c *grumble.Context, pi *proto.ProcessInfo) {
 		c.App.Printf("[No process info]\n")
 		return
 	}
+
+	startTime := time.UnixMilli(pi.GetStartTime())
+	upTime := time.Since(startTime).Round(time.Second)
+
 	c.App.Printf("\n")
 	c.App.Printf("\tpid: %s\n", pi.GetPid())
-	c.App.Printf("\tstart-time: %s\n", pi.GetStartTime())
-	c.App.Printf("\tup-time: %s\n", pi.GetUptime())
+	c.App.Printf("\tstart-time: %s (%s ago)\n", startTime.Format(time.UnixDate), upTime.String())
 }
 
 func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
@@ -194,9 +197,9 @@ func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
 	c.App.Printf("\n")
 	c.App.Printf("\tjob-name:  %s\n", ji.GetJobName())
 	c.App.Printf("\tjob-state: %s\n", ji.GetJobState())
-	c.App.Printf("\tprepare-time: %s\n", ji.GetPrepareTime())
-	c.App.Printf("\trun-time:     %s\n", ji.GetRunTime())
-	c.App.Printf("\tend-time:     %s\n", ji.GetEndTime())
+	c.App.Printf("\tprepare-time: %s\n", time.UnixMilli(ji.GetPrepareTime()).Format(time.UnixDate))
+	c.App.Printf("\trun-time:     %s\n", time.UnixMilli(ji.GetRunTime()).Format(time.UnixDate))
+	c.App.Printf("\tend-time:     %s\n", time.UnixMilli(ji.GetEndTime()).Format(time.UnixDate))
 	c.App.Printf("\tfatal-errors:     %d\n", ji.GetFatalErrors())
 	c.App.Printf("\tnon-fatal-errors: %d\n", ji.GetNonFatalErrors())
 	c.App.Printf("\tdata-spec:\n")
@@ -215,14 +218,17 @@ func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
 }
 
 func showMinionSummaryInfo(c *grumble.Context, mi *proto.MinionInfo) {
+	startTime := time.UnixMilli(mi.GetProcessInfo().GetStartTime())
+	upTime := time.Since(startTime).Round(time.Second)
+	c.App.Printf("[version=%s, pid=%s, start-time=%s (%s ago), ",
+		mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
+		startTime.Format(time.UnixDate), upTime.String())
+
 	if mi.GetJobInfo() == nil {
-		c.App.Printf("[version=%s, pid=%s, uptime=%s, idle\n",
-			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
-			mi.GetProcessInfo().GetUptime())
+		c.App.Printf("idle]\n")
 	} else {
-		c.App.Printf("[version=%s, pid=%s, uptime=%s, jobName=%s, jobState=%s]\n",
-			mi.GetBuildInfo().GetAppVersion(), mi.GetProcessInfo().GetPid(),
-			mi.GetProcessInfo().GetUptime(), mi.GetJobInfo().GetJobName(), mi.GetJobInfo().GetJobState())
+		c.App.Printf("job-name=%s, job-state=%s]\n",
+			mi.GetJobInfo().GetJobName(), mi.GetJobInfo().GetJobState())
 	}
 }
 

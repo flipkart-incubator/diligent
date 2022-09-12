@@ -145,15 +145,8 @@ func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.D
 			continue
 		}
 
-		var st, et time.Time
-		st, err = time.Parse(time.UnixDate, ji.GetJobInfo().GetRunTime())
-		if err != nil {
-			return
-		}
-		et, err = time.Parse(time.UnixDate, ji.GetJobInfo().GetEndTime())
-		if err != nil {
-			return
-		}
+		st := time.UnixMilli(ji.GetJobInfo().GetRunTime())
+		et := time.UnixMilli(ji.GetJobInfo().GetEndTime())
 
 		if st.Before(startTime) {
 			startTime = st

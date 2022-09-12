@@ -81,9 +81,9 @@ func (j *JobInfo) ToProto() *proto.JobInfo {
 		JobName:        j.name,
 		JobSpec:        j.spec,
 		JobState:       j.state.ToProto(),
-		PrepareTime:    j.prepareTime.Format(time.UnixDate),
-		RunTime:        j.runTime.Format(time.UnixDate),
-		EndTime:        j.endTime.Format(time.UnixDate),
+		PrepareTime:    j.prepareTime.UnixMilli(),
+		RunTime:        j.runTime.UnixMilli(),
+		EndTime:        j.endTime.UnixMilli(),
 		FatalErrors:    int32(j.fatalErrors),
 		NonFatalErrors: int32(j.nonFatalErrors),
 	}

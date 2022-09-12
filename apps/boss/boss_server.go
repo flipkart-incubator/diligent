@@ -78,8 +78,7 @@ func (s *BossServer) Ping(_ context.Context, _ *proto.BossPingRequest) (*proto.B
 		},
 		ProcessInfo: &proto.ProcessInfo{
 			Pid:       s.pid,
-			StartTime: s.startTime.Format(time.UnixDate),
-			Uptime:    time.Since(s.startTime).String(),
+			StartTime: s.startTime.UnixMilli(),
 		},
 	}, nil
 }
