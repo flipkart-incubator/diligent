@@ -53,7 +53,7 @@ func init() {
 		Name: "await-count",
 		Help: "wait until boss reports a desired number of live minions",
 		Flags: func(f *grumble.Flags) {
-			f.Duration("t", "timeout", 10*time.Second, "wait timeout")
+			f.Duration("t", "timeout", 30*time.Minute, "wait timeout")
 		},
 		Args: func(a *grumble.Args) {
 			a.Int("num-minions", "number of minions to wait for")
