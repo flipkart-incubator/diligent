@@ -30,20 +30,16 @@ func init() {
 	reportSaveCmd := &grumble.Command{
 		Name: "save",
 		Help: "save the report for a job",
-		Args: func(a *grumble.Args) {
-			a.String("job-id", "id of the job to generate report for")
-		},
-		Run: reportSave,
+		Run:  reportSave,
 	}
 	reportCmd.AddCommand(reportSaveCmd)
 }
 
 func reportSave(c *grumble.Context) error {
 	promAddr := c.Flags.String("prom")
-	jobId := c.Args.String("job-id")
 
-	c.App.Printf("Discovering timespan for job %s...", jobId)
-	startTime, endTime, stepSize, err := getTimes(c, jobId)
+	c.App.Printf("Discovering timespan for current job...")
+	startTime, endTime, stepSize, err := getTimes(c)
 	if err != nil {
 		return err
 	}
@@ -70,7 +66,7 @@ func reportSave(c *grumble.Context) error {
 
 	page := components.NewPage()
 	page.AddCharts(chs...)
-	fileName := fmt.Sprintf("report-%s.html", jobId)
+	fileName := fmt.Sprintf("report.html")
 	f, err := os.Create(fileName)
 	if err != nil {
 		return err
@@ -83,7 +79,7 @@ func reportSave(c *grumble.Context) error {
 	return nil
 }
 
-func getTimes(c *grumble.Context, jobId string) (startTime, endTime time.Time, stepSize time.Duration, err error) {
+func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.Duration, err error) {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -91,9 +87,7 @@ func getTimes(c *grumble.Context, jobId string) (startTime, endTime time.Time, s
 	}
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
-	res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{
-		JobId: jobId,
-	})
+	res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{})
 	grpcCancel()
 	if err != nil {
 		return
@@ -102,14 +96,15 @@ func getTimes(c *grumble.Context, jobId string) (startTime, endTime time.Time, s
 	unreachableCount := 0
 	endedCount := 0
 	notSuccess := 0
-	withJobInfoCount := 0
+	withoutJobInfoCount := 0
 	for _, ji := range res.GetMinionJobInfos() {
 		if !ji.GetStatus().GetIsOk() {
 			unreachableCount++
 			continue
 		}
-		if ji.GetJobInfo() != nil {
-			withJobInfoCount++
+		if ji.GetJobInfo() == nil {
+			withoutJobInfoCount++
+			continue
 		}
 		switch ji.GetJobInfo().GetJobState() {
 		case proto.JobState_ENDED_SUCCESS:
@@ -131,15 +126,15 @@ func getTimes(c *grumble.Context, jobId string) (startTime, endTime time.Time, s
 	fmt.Printf("Unreachable minions: %d\n", unreachableCount)
 	fmt.Printf("Ended minions: %d\n", endedCount)
 	fmt.Printf("Failed minions: %d\n", notSuccess)
-	fmt.Printf("Minions with valid job info: %d\n", withJobInfoCount)
+	fmt.Printf("Minions without valid job info: %d\n", withoutJobInfoCount)
 	fmt.Printf("Minions not yet ended: %d\n", notEnded)
 
 	if notEnded > 0 {
 		err = fmt.Errorf("unable to generate report. %d minions have not clearly eneded", notEnded)
 		return
 	}
-	if withJobInfoCount == 0 {
-		err = fmt.Errorf("no minions have a valid job info")
+	if withoutJobInfoCount != 0 {
+		err = fmt.Errorf("some minions do not have a valid job info")
 		return
 	}
 

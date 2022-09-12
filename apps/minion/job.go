@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/datagen"
+	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/metrics"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
 	"github.com/flipkart-incubator/diligent/pkg/work"
@@ -86,6 +87,27 @@ func (j *JobInfo) ToProto() *proto.JobInfo {
 		FatalErrors:    int32(j.fatalErrors),
 		NonFatalErrors: int32(j.nonFatalErrors),
 	}
+}
+
+type DataContext struct {
+	dataSpec *datagen.Spec
+	dataGen  *datagen.DataGen
+}
+
+type DBContext struct {
+	driver string
+	url    string
+	db     *sql.DB
+}
+
+type WorkloadContext struct {
+	workloadName  string
+	assignedRange *intgen.Range
+	tableName     string
+	durationSec   int
+	concurrency   int
+	batchSize     int
+	workload      *work.Workload
 }
 
 // Job represents a particular run of a workload
@@ -182,7 +204,7 @@ func (j *Job) Run(ctx context.Context) (chan int, error) {
 		return nil, fmt.Errorf("job is in %s state. cannot run", j.state.String())
 	}
 
-	notifyCh := make(chan int)
+	notifyCh := make(chan int, 1) // Buffered so that we can notify and move on
 	j.state = Running
 	j.runTime = time.Now()
 

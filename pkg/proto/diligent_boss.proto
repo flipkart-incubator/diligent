@@ -98,7 +98,6 @@ message MinionJobInfo {
 }
 
 message BossQueryJobRequest {
-  string job_id = 1;
 }
 
 message BossQueryJobResponse {

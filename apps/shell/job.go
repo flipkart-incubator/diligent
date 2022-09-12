@@ -54,10 +54,7 @@ func init() {
 	jobQueryCmd := &grumble.Command{
 		Name: "query",
 		Help: "Query the status of a job",
-		Args: func(a *grumble.Args) {
-			a.String("job-id", "id of the job to query")
-		},
-		Run: queryJob,
+		Run:  queryJob,
 	}
 	jobCmd.AddCommand(jobQueryCmd)
 
@@ -66,9 +63,6 @@ func init() {
 		Help: "wait for a job to complete",
 		Flags: func(f *grumble.Flags) {
 			f.Duration("t", "timeout", 10*time.Second, "wait timeout")
-		},
-		Args: func(a *grumble.Args) {
-			a.String("job-id", "job-id to wait for")
 		},
 		Run: awaitJobCompletion,
 	}
@@ -257,8 +251,6 @@ func abortJob(c *grumble.Context) error {
 }
 
 func queryJob(c *grumble.Context) error {
-	jobId := c.Args.String("job-id")
-
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -267,9 +259,7 @@ func queryJob(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{
-		JobId: jobId,
-	})
+	res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 
@@ -298,19 +288,16 @@ func awaitJobCompletion(c *grumble.Context) error {
 		return err
 	}
 
-	jobId := c.Args.String("job-id")
 	timeout := c.Flags.Duration("timeout")
 
-	c.App.Printf("Waiting for job %s to end. Wait timeout=%s\n", jobId, timeout.String())
+	c.App.Printf("Waiting for current job %s to end. Wait timeout=%s\n", timeout.String())
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	for {
 		c.App.Printf(".")
 		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
-		res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{
-			JobId: jobId,
-		})
+		res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{})
 		grpcCancel()
 		if err != nil {
 			c.App.Printf("Request to boss failed (%s)\n", err.Error())
@@ -346,9 +333,9 @@ func awaitJobCompletion(c *grumble.Context) error {
 		remaining := len(res.GetMinionJobInfos()) - (noStatus + endedCount)
 		if remaining == 0 {
 			if notSuccess > 0 {
-				c.App.Printf("Job %s ended. One or more minions did not end successfully\n", jobId)
+				c.App.Printf("Job ended. One or more minions did not end successfully\n")
 			} else {
-				c.App.Printf("Job %s ended successfully\n", jobId)
+				c.App.Printf("Job ended successfully\n")
 			}
 			break
 		}

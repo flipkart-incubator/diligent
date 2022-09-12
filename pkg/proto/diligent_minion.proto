@@ -52,7 +52,6 @@ message MinionAbortJobResponse {
 }
 
 message MinionQueryJobRequest {
-  string job_id = 1;
 }
 
 message MinionQueryJobResponse {

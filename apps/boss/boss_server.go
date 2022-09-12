@@ -324,7 +324,7 @@ func (s *BossServer) QueryJob(ctx context.Context, in *proto.BossQueryJobRequest
 
 	for _, mm := range s.registry.GetMinionManagers() {
 		log.Infof("QueryJob(): Querying on Minion %s", mm.GetAddr())
-		go mm.QueryJobOnMinion(ctx, in.GetJobId(), ch)
+		go mm.QueryJobOnMinion(ctx, ch)
 	}
 
 	// Collect execution results

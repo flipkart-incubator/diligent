@@ -175,8 +175,8 @@ func (m *MinionManager) AbortJobOnMinion(ctx context.Context, ch chan *proto.Min
 	return
 }
 
-func (m *MinionManager) QueryJobOnMinion(ctx context.Context, jobId string, ch chan *proto.MinionJobInfo) {
-	res, err := m.client.QueryJob(ctx, jobId)
+func (m *MinionManager) QueryJobOnMinion(ctx context.Context, ch chan *proto.MinionJobInfo) {
+	res, err := m.client.QueryJob(ctx)
 
 	if err != nil {
 		ch <- &proto.MinionJobInfo{

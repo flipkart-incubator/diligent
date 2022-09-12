@@ -168,20 +168,20 @@ func (m *MinionClient) AbortJob(ctx context.Context) (*proto.MinionAbortJobRespo
 	return res, nil
 }
 
-func (m *MinionClient) QueryJob(ctx context.Context, jobId string) (*proto.MinionQueryJobResponse, error) {
+func (m *MinionClient) QueryJob(ctx context.Context) (*proto.MinionQueryJobResponse, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
 	minionConnection, err := m.getConnectionForMinion(ctx)
 	if err != nil {
-		log.Errorf("QueryJob(%s): %s", jobId, err.Error())
+		log.Errorf("QueryJob(): %s", err.Error())
 		return nil, err
 	}
 	defer minionConnection.Close()
 	grpcClient := proto.NewMinionClient(minionConnection)
 
 	grpcCtx, grpcCtxCancel := context.WithTimeout(ctx, minionRequestTimeout*time.Second)
-	res, err := grpcClient.QueryJob(grpcCtx, &proto.MinionQueryJobRequest{JobId: jobId})
+	res, err := grpcClient.QueryJob(grpcCtx, &proto.MinionQueryJobRequest{})
 	grpcCtxCancel()
 	if err != nil {
 		return nil, err

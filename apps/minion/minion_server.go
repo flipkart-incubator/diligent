@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
+	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
-	"github.com/flipkart-incubator/diligent/pkg/datagen"
 	"github.com/flipkart-incubator/diligent/pkg/idgen"
-	"github.com/flipkart-incubator/diligent/pkg/intgen"
 	"github.com/flipkart-incubator/diligent/pkg/metrics"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
-	"github.com/flipkart-incubator/diligent/pkg/work"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/stdlib"
 	log "github.com/sirupsen/logrus"
@@ -23,27 +20,6 @@ const (
 	bossConnectionTimoutSecs = 5
 	bossRequestTimeoutSecs   = 5
 )
-
-type DataContext struct {
-	dataSpec *datagen.Spec
-	dataGen  *datagen.DataGen
-}
-
-type DBContext struct {
-	driver string
-	url    string
-	db     *sql.DB
-}
-
-type WorkloadContext struct {
-	workloadName  string
-	assignedRange *intgen.Range
-	tableName     string
-	durationSec   int
-	concurrency   int
-	batchSize     int
-	workload      *work.Workload
-}
 
 // MinionServer represents a diligent minion gRPC server and associated state
 // It is thread safe
@@ -59,11 +35,7 @@ type MinionServer struct {
 	pid       string    //pid is a string that represents a unique run of the minion server
 	startTime time.Time //startTime is when this server started executing
 
-	jobTracker *JobTracker
-	data       *DataContext
-	db         *DBContext
-	workload   *WorkloadContext
-
+	job     *Job
 	metrics *metrics.DiligentMetrics
 }
 
@@ -77,12 +49,7 @@ func NewMinionServer(grpcAddr, metricsAddr, advertiseAddr, bossAddr string) *Min
 		pid:       idgen.GenerateId16(),
 		startTime: time.Now(),
 
-		jobTracker: NewJobTracker(),
-
-		data:     nil,
-		db:       nil,
-		workload: nil,
-		metrics:  nil,
+		metrics: nil,
 	}
 }
 
@@ -151,7 +118,7 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 
 	log.Infof("GRPC: Ping completed successfully")
 	var protoJobInfo *proto.JobInfo = nil
-	currentJob := s.jobTracker.CurrentJob()
+	currentJob := s.job
 	if currentJob != nil {
 		protoJobInfo = currentJob.Info().ToProto()
 	}
@@ -177,7 +144,18 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	err := s.jobTracker.Prepare(ctx, in.GetJobId(), in.GetJobSpec(), s.metrics)
+	// Cannot run prepare if we have a job in running state. Either no job, or job in an ended state are acceptable
+	if s.job != nil && s.job.State() == Running {
+		return &proto.MinionPrepareJobResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: fmt.Sprintf("job with id=%s is currently running", s.job.Id()),
+			},
+			Pid: s.pid,
+		}, nil
+	}
+
+	job, err := PrepareJob(ctx, in.GetJobId(), in.GetJobSpec(), s.metrics)
 	if err != nil {
 		return &proto.MinionPrepareJobResponse{
 			Status: &proto.GeneralStatus{
@@ -187,6 +165,7 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 			Pid: s.pid,
 		}, nil
 	}
+	s.job = job
 
 	// Preparation was successful
 	log.Infof("GRPC: PrepareJob(jobId=%s) completed successfully", in.GetJobId())
@@ -204,7 +183,18 @@ func (s *MinionServer) RunJob(ctx context.Context, in *proto.MinionRunJobRequest
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	err := s.jobTracker.Run(ctx)
+	// Cannot run if we have no current job
+	if s.job == nil {
+		return &proto.MinionRunJobResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "no current job",
+			},
+			Pid: s.pid,
+		}, nil
+	}
+
+	_, err := s.job.Run(ctx)
 	if err != nil {
 		return &proto.MinionRunJobResponse{
 			Status: &proto.GeneralStatus{
@@ -231,7 +221,18 @@ func (s *MinionServer) AbortJob(ctx context.Context, in *proto.MinionAbortJobReq
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	err := s.jobTracker.Abort(ctx)
+	// Cannot abort if we have no current job
+	if s.job == nil {
+		return &proto.MinionAbortJobResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "no current job",
+			},
+			Pid: s.pid,
+		}, nil
+	}
+
+	err := s.job.Abort(ctx)
 	if err != nil {
 		return &proto.MinionAbortJobResponse{
 			Status: &proto.GeneralStatus{
@@ -258,25 +259,17 @@ func (s *MinionServer) QueryJob(ctx context.Context, in *proto.MinionQueryJobReq
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	jobInfo := s.jobTracker.GetJobInfo(in.GetJobId())
-	if jobInfo == nil {
-		return &proto.MinionQueryJobResponse{
-			Status: &proto.GeneralStatus{
-				IsOk:          false,
-				FailureReason: "no information found for job: " + in.GetJobId(),
-			},
-			Pid: s.pid,
-		}, nil
-	}
-
-	// Query was successful
 	log.Infof("GRPC: QueryJob() completed successfully")
+	var protoJobInfo *proto.JobInfo = nil
+	currentJob := s.job
+	if currentJob != nil {
+		protoJobInfo = currentJob.Info().ToProto()
+	}
 	return &proto.MinionQueryJobResponse{
 		Status: &proto.GeneralStatus{
-			IsOk:          true,
-			FailureReason: "",
+			IsOk: true,
 		},
 		Pid:     s.pid,
-		JobInfo: jobInfo.ToProto(),
+		JobInfo: protoJobInfo,
 	}, nil
 }
