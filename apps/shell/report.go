@@ -115,9 +115,6 @@ func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.D
 		case proto.JobState_ENDED_ABORTED:
 			endedCount++
 			notSuccess++
-		case proto.JobState_ENDED_NEVER_RAN:
-			endedCount++
-			notSuccess++
 		}
 	}
 	totalMinions := len(res.GetMinionJobInfos())

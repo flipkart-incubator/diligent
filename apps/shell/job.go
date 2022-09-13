@@ -331,10 +331,6 @@ func jobAwaitCompletion(c *grumble.Context) error {
 				c.App.Printf("%s: Ended as aborted\n", mi.GetAddr())
 				endedCount++
 				notSuccess++
-			case proto.JobState_ENDED_NEVER_RAN:
-				c.App.Printf("%s: Ended never ran\n", mi.GetAddr())
-				endedCount++
-				notSuccess++
 			}
 		}
 		remaining := len(res.GetMinionJobInfos()) - (noStatus + endedCount)

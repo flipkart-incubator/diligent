@@ -23,7 +23,6 @@ const (
 	EndedSuccess
 	EndedFailure
 	EndedAborted
-	EndedNeverRan
 )
 
 func (j JobState) String() string {
@@ -38,8 +37,6 @@ func (j JobState) String() string {
 		return "EndedFailure"
 	case EndedAborted:
 		return "EndedAborted"
-	case EndedNeverRan:
-		return "EndedNeverRan"
 	}
 	panic(fmt.Errorf("unknown job state %d", j))
 }
@@ -56,8 +53,6 @@ func (j JobState) ToProto() proto.JobState {
 		return proto.JobState_ENDED_FAILURE
 	case EndedAborted:
 		return proto.JobState_ENDED_ABORTED
-	case EndedNeverRan:
-		return proto.JobState_ENDED_NEVER_RAN
 	}
 	panic(fmt.Errorf("unknown job state %d", j))
 }
@@ -259,11 +254,15 @@ func (j *Job) Abort(ctx context.Context) error {
 	j.mut.Lock()
 	defer j.mut.Unlock()
 
+	// If we are in prepared state, then workload has not started running, and there are no
+	// completion handlers. So explicitly mark as aborted
 	if j.state == Prepared {
-		j.state = EndedNeverRan
+		j.state = EndedAborted
 		j.endTime = time.Now()
 	}
 
+	// If we are in running state, then completion handlers and signalling are in place
+	// Just abort the workload, when the workload go routines end, the job itself will be marked as aborted
 	if j.state == Running {
 		j.workload.workload.Abort()
 	}

@@ -143,12 +143,13 @@ func (s *MinionServer) PrepareJob(ctx context.Context, in *proto.MinionPrepareJo
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	// Cannot run prepare if we have a job in running state. Either no job, or job in an ended state are acceptable
-	if s.job != nil && s.job.State() == Running {
+	// Cannot run prepare if we have a job in prepared or running state.
+	// Either no job, or job in an ended state are acceptable
+	if s.job != nil && (s.job.State() == Prepared || s.job.state == Running) {
 		return &proto.MinionPrepareJobResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
-				FailureReason: fmt.Sprintf("job with name=%s is currently running", s.job.Name()),
+				FailureReason: fmt.Sprintf("job with name=%s is in state %s", s.job.Name(), s.job.State().String()),
 			},
 			Pid: s.pid,
 		}, nil
