@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/flipkart-incubator/diligent/pkg/proto"
 	grpcpool "github.com/processout/grpc-go-pool"
 	log "github.com/sirupsen/logrus"
@@ -15,15 +16,64 @@ const (
 	minionConnMaxLifetimeSecs = 600
 	minionDialTimeoutSecs     = 3
 	minionRequestTimeout      = 5
+	unreachableThreshold      = 3
+	errorThreshold            = 3
 )
+
+//type MinionState int
+//
+//const (
+//	_ MinionState = iota
+//	MinionIdle
+//	MinionPrepared
+//	MinionRunning
+//	MinionEndedSuccess
+//	MinionEndedFailure
+//	MinionEndedAborted
+//	MinionUnreachable
+//	MinionRestarted
+//	MinionErrored
+//)
+
+type WatchState int
+
+const (
+	_ WatchState = iota
+	EndedSuccess
+	EndedFailure
+	EndedAborted
+	Unreachable
+	Restarted
+	Errored
+)
+
+func (w WatchState) String() string {
+	switch w {
+	case EndedSuccess:
+		return "EndedSuccess"
+	case EndedFailure:
+		return "EndedFailure"
+	case EndedAborted:
+		return "EndedAborted"
+	case Unreachable:
+		return "Unreachable"
+	case Restarted:
+		return "Restarted"
+	case Errored:
+		return "Errored"
+	default:
+		panic(fmt.Sprintf("unknown watch state: %d", w))
+	}
+}
 
 // MinionProxy helps us run gRPC operations on a minion
 // It internally maintains the connection pool for the minion
 // It is thread safe
 type MinionProxy struct {
-	mut  sync.Mutex // Must be taken for all operations on the MinionProxy
-	addr string
-	pool *grpcpool.Pool
+	mut     sync.Mutex // Must be taken for all operations on the MinionProxy
+	addr    string
+	pool    *grpcpool.Pool
+	watchCh chan WatchState
 }
 
 func NewMinionProxy(addr string) (*MinionProxy, error) {
@@ -64,10 +114,16 @@ func (p *MinionProxy) Close() {
 	}
 }
 
-func (p *MinionProxy) GetAddr() string {
+func (p *MinionProxy) Addr() string {
 	p.mut.Lock()
 	defer p.mut.Unlock()
 	return p.addr
+}
+
+func (p *MinionProxy) WatchCh() chan WatchState {
+	p.mut.Lock()
+	defer p.mut.Unlock()
+	return p.watchCh
 }
 
 // PingAsync invokes Ping on a minion asynchronously
@@ -148,10 +204,25 @@ func (p *MinionProxy) PrepareJobSync(ctx context.Context, jobName string,
 		},
 	})
 	grpcCtxCancel()
+
 	if err != nil {
 		log.Errorf("PrepareJob(): %s", err.Error())
 		return nil, err
 	}
+	if !res.GetStatus().GetIsOk() {
+		e := fmt.Errorf(res.GetStatus().GetFailureReason())
+		log.Errorf("PrepareJob(): %s", e.Error())
+		return nil, e
+	}
+
+	p.watchCh = make(chan WatchState, 1)
+	p.Watch(res.GetPid())
+
+	//TODO: This is temp code to be removed later
+	go func(addr string) {
+		s := <-p.WatchCh()
+		fmt.Printf("Minion %s: got watch status: %s\n", addr, s.String())
+	}(p.addr)
 	return res, nil
 }
 
@@ -266,4 +337,74 @@ func (p *MinionProxy) QueryJobSync(ctx context.Context) (*proto.MinionQueryJobRe
 		return nil, err
 	}
 	return res, nil
+}
+
+func (p *MinionProxy) Watch(pid string) {
+	go func() {
+		unreachableCount := 0
+		errorCount := 0
+		for {
+			time.Sleep(1 * time.Second)
+			res, err := p.QueryJobSync(context.Background())
+
+			// Was the minion reachable?
+			if err != nil {
+				unreachableCount++
+				log.Warnf("Watch(): %s unreachable. count=%d reason=%s", p.addr, unreachableCount, err.Error())
+				if unreachableCount >= unreachableThreshold {
+					p.watchCh <- Unreachable
+					return
+				} else {
+					continue
+				}
+			} else {
+				// Reset count on success
+				unreachableCount = 0
+			}
+
+			// Was it the same incarnation of the minion?
+			if res.GetPid() != pid {
+				log.Warnf("Watch(): %s restarted. pid-expected=%s pid-actual=%s", p.addr, pid, res.GetPid())
+				p.watchCh <- Restarted
+				return
+			}
+
+			// Did the minion have a valid response
+			if !res.GetStatus().GetIsOk() {
+				errorCount++
+				log.Warnf("Watch(): %s error. count=%d reason=%s", p.addr, errorCount, err.Error())
+				if errorCount >= errorThreshold {
+					p.watchCh <- Errored
+					return
+				} else {
+					continue
+				}
+			} else {
+				// Reset count on success
+				errorCount = 0
+			}
+
+			switch res.GetJobInfo().GetJobState() {
+			case proto.JobState_PREPARED:
+				// Nothing to do
+			case proto.JobState_RUNNING:
+				// Nothing to do
+			case proto.JobState_ENDED_SUCCESS:
+				log.Warnf("Watch(): %s. EndedSuccess", p.addr)
+				p.watchCh <- EndedSuccess
+				return
+			case proto.JobState_ENDED_FAILURE:
+				log.Warnf("Watch(): %s. EndedFailure", p.addr)
+				p.watchCh <- EndedFailure
+				return
+			case proto.JobState_ENDED_ABORTED:
+				log.Warnf("Watch(): %s. EndedAborted", p.addr)
+				p.watchCh <- EndedAborted
+				return
+			default:
+				panic(fmt.Sprintf("unknown job state %d", res.GetJobInfo().GetJobState()))
+			}
+		}
+	}()
+	return
 }
