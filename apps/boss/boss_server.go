@@ -136,21 +136,54 @@ func (s *BossServer) UnregisterMinion(_ context.Context, in *proto.BossUnregiste
 }
 
 func (s *BossServer) GetMinions(ctx context.Context, _ *proto.BossGetMinionsRequest) (*proto.BossGetMinionsResponse, error) {
-	log.Infof("GRPC: ShowMinions()")
+	log.Infof("GRPC: GetMinions()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	minionInfos := make([]*proto.MinionInfo, s.registry.GetNumMinions())
-	ch := make(chan *proto.MinionInfo)
+	// Slices to gather data on individual minions
+	numMinions := s.registry.GetNumMinions()
+	addrs := make([]string, numMinions)
+	rchs := make([]chan *proto.MinionPingResponse, numMinions)
+	echs := make([]chan error, numMinions)
 
-	for _, mm := range s.registry.GetMinionManagers() {
-		go mm.GetMinionStatus(ctx, ch)
+	// Invoke on individual minions
+	i := 0
+	for addr, proxy := range s.registry.Minions() {
+		log.Infof("Ping(): Triggering run on Minion %s", addr)
+		addrs[i] = addr
+		rchs[i], echs[i] = proxy.PingAsync(ctx)
+		i++
 	}
 
-	for i, _ := range minionInfos {
-		minionInfos[i] = <-ch
+	// For holding info of individual minions
+	minionInfos := make([]*proto.MinionInfo, numMinions)
+
+	// Collect execution results
+	for i, _ = range minionInfos {
+		select {
+		case res := <-rchs[i]:
+			minionInfos[i] = &proto.MinionInfo{
+				Addr: addrs[i],
+				Reachability: &proto.GeneralStatus{
+					IsOk:          true,
+					FailureReason: "",
+				},
+				BuildInfo:   res.GetBuildInfo(),
+				ProcessInfo: res.GetProcessInfo(),
+				JobInfo:     res.GetJobInfo(),
+			}
+		case err := <-echs[i]:
+			minionInfos[i] = &proto.MinionInfo{
+				Addr: addrs[i],
+				Reachability: &proto.GeneralStatus{
+					IsOk:          false,
+					FailureReason: err.Error(),
+				},
+			}
+		}
 	}
 
+	log.Infof("Ping(): completed")
 	return &proto.BossGetMinionsResponse{
 		MinionInfos: minionInfos,
 	}, nil
@@ -187,13 +220,15 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 	}
 	log.Infof("PrepareJob(): Data partitioned among minions: %v", assignedRanges)
 
-	// Prepare individual minions
-	minionStatuses := make([]*proto.MinionStatus, numMinions)
-	ch := make(chan *proto.MinionStatus)
+	// Slices to gather data on individual minions
+	addrs := make([]string, numMinions)
+	rchs := make([]chan *proto.MinionPrepareJobResponse, numMinions)
+	echs := make([]chan error, numMinions)
 
+	// Invoke on individual minions
 	i := 0
-	for _, mm := range s.registry.GetMinionManagers() {
-		log.Infof("PrepareJob(): Preparing Minion %s", mm.GetAddr())
+	for addr, proxy := range s.registry.Minions() {
+		log.Infof("PrepareJob(): Preparing Minion %s", addr)
 		wlSpec := &proto.WorkloadSpec{
 			WorkloadName:  in.GetJobSpec().GetWorkloadSpec().GetWorkloadName(),
 			AssignedRange: proto.RangeToProto(assignedRanges[i]),
@@ -203,24 +238,41 @@ func (s *BossServer) PrepareJob(ctx context.Context, in *proto.BossPrepareJobReq
 			BatchSize:     in.GetJobSpec().GetWorkloadSpec().GetBatchSize(),
 		}
 
-		go mm.PrepareJobOnMinion(ctx, in.GetJobSpec().GetJobName(), in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec, ch)
+		addrs[i] = addr
+		rchs[i], echs[i] = proxy.PrepareJobAsync(ctx, in.GetJobSpec().GetJobName(), in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec)
 		i++
 	}
 
-	// Collect execution results
-	for i, _ = range minionStatuses {
-		minionStatuses[i] = <-ch
-	}
-
-	// Build overall status
+	// For holding overall result of this call and status of individual minions
 	overallStatus := proto.GeneralStatus{
 		IsOk:          true,
 		FailureReason: "",
 	}
-	for _, ms := range minionStatuses {
-		if !ms.Status.IsOk {
-			overallStatus.IsOk = false
-			overallStatus.FailureReason = "errors encountered on one or more minions"
+	minionStatuses := make([]*proto.MinionStatus, numMinions)
+
+	// Collect execution results
+	for i, _ = range minionStatuses {
+		select {
+		case res := <-rchs[i]:
+			minionStatuses[i] = &proto.MinionStatus{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          res.GetStatus().GetIsOk(),
+					FailureReason: res.GetStatus().GetFailureReason(),
+				},
+			}
+		case err := <-echs[i]:
+			overallStatus = proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "errors encountered on one or more minions",
+			}
+			minionStatuses[i] = &proto.MinionStatus{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          false,
+					FailureReason: err.Error(),
+				},
+			}
 		}
 	}
 
@@ -236,29 +288,51 @@ func (s *BossServer) RunJob(ctx context.Context, in *proto.BossRunJobRequest) (*
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	// Run on individual minions
-	minionStatuses := make([]*proto.MinionStatus, s.registry.GetNumMinions())
-	ch := make(chan *proto.MinionStatus)
+	// Slices to gather data on individual minions
+	numMinions := s.registry.GetNumMinions()
+	addrs := make([]string, numMinions)
+	rchs := make([]chan *proto.MinionRunJobResponse, numMinions)
+	echs := make([]chan error, numMinions)
 
-	for _, mm := range s.registry.GetMinionManagers() {
-		log.Infof("RunJob(): Triggering run on Minion %s", mm.GetAddr())
-		go mm.RunJobOnMinion(ctx, ch)
+	// Invoke on individual minions
+	i := 0
+	for addr, proxy := range s.registry.Minions() {
+		log.Infof("RunJob(): Triggering run on Minion %s", addr)
+		addrs[i] = addr
+		rchs[i], echs[i] = proxy.RunJobAsync(ctx)
+		i++
 	}
 
-	// Collect execution results
-	for i, _ := range minionStatuses {
-		minionStatuses[i] = <-ch
-	}
-
-	// Build overall status
+	// For holding overall result of this call and status of individual minions
 	overallStatus := proto.GeneralStatus{
 		IsOk:          true,
 		FailureReason: "",
 	}
-	for _, ms := range minionStatuses {
-		if !ms.Status.IsOk {
-			overallStatus.IsOk = false
-			overallStatus.FailureReason = "errors encountered on one or more minions"
+	minionStatuses := make([]*proto.MinionStatus, numMinions)
+
+	// Collect execution results
+	for i, _ = range minionStatuses {
+		select {
+		case res := <-rchs[i]:
+			minionStatuses[i] = &proto.MinionStatus{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          res.GetStatus().GetIsOk(),
+					FailureReason: res.GetStatus().GetFailureReason(),
+				},
+			}
+		case err := <-echs[i]:
+			overallStatus = proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "errors encountered on one or more minions",
+			}
+			minionStatuses[i] = &proto.MinionStatus{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          false,
+					FailureReason: err.Error(),
+				},
+			}
 		}
 	}
 
@@ -274,28 +348,51 @@ func (s *BossServer) AbortJob(ctx context.Context, in *proto.BossAbortJobRequest
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	minionStatuses := make([]*proto.MinionStatus, s.registry.GetNumMinions())
-	ch := make(chan *proto.MinionStatus)
+	// Slices to gather data on individual minions
+	numMinions := s.registry.GetNumMinions()
+	addrs := make([]string, numMinions)
+	rchs := make([]chan *proto.MinionAbortJobResponse, numMinions)
+	echs := make([]chan error, numMinions)
 
-	for _, mm := range s.registry.GetMinionManagers() {
-		log.Infof("AbortJob(): Aborting on Minion %s", mm.GetAddr())
-		go mm.AbortJobOnMinion(ctx, ch)
+	// Invoke on individual minions
+	i := 0
+	for addr, proxy := range s.registry.Minions() {
+		log.Infof("AbortJob(): Triggering run on Minion %s", addr)
+		addrs[i] = addr
+		rchs[i], echs[i] = proxy.AbortJobAsync(ctx)
+		i++
 	}
 
-	// Collect execution results
-	for i, _ := range minionStatuses {
-		minionStatuses[i] = <-ch
-	}
-
-	// Build overall status
+	// For holding overall result of this call and status of individual minions
 	overallStatus := proto.GeneralStatus{
 		IsOk:          true,
 		FailureReason: "",
 	}
-	for _, ms := range minionStatuses {
-		if !ms.Status.IsOk {
-			overallStatus.IsOk = false
-			overallStatus.FailureReason = "errors encountered on one or more minions"
+	minionStatuses := make([]*proto.MinionStatus, numMinions)
+
+	// Collect execution results
+	for i, _ = range minionStatuses {
+		select {
+		case res := <-rchs[i]:
+			minionStatuses[i] = &proto.MinionStatus{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          res.GetStatus().GetIsOk(),
+					FailureReason: res.GetStatus().GetFailureReason(),
+				},
+			}
+		case err := <-echs[i]:
+			overallStatus = proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "errors encountered on one or more minions",
+			}
+			minionStatuses[i] = &proto.MinionStatus{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          false,
+					FailureReason: err.Error(),
+				},
+			}
 		}
 	}
 
@@ -311,28 +408,52 @@ func (s *BossServer) QueryJob(ctx context.Context, in *proto.BossQueryJobRequest
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	minionJobInfos := make([]*proto.MinionJobInfo, s.registry.GetNumMinions())
-	ch := make(chan *proto.MinionJobInfo)
+	// Slices to gather data on individual minions
+	numMinions := s.registry.GetNumMinions()
+	addrs := make([]string, numMinions)
+	rchs := make([]chan *proto.MinionQueryJobResponse, numMinions)
+	echs := make([]chan error, numMinions)
 
-	for _, mm := range s.registry.GetMinionManagers() {
-		log.Infof("QueryJob(): Querying on Minion %s", mm.GetAddr())
-		go mm.QueryJobOnMinion(ctx, ch)
+	// Invoke on individual minions
+	i := 0
+	for addr, proxy := range s.registry.Minions() {
+		log.Infof("QueryJob(): Triggering run on Minion %s", addr)
+		addrs[i] = addr
+		rchs[i], echs[i] = proxy.QueryJobAsync(ctx)
+		i++
 	}
 
-	// Collect execution results
-	for i, _ := range minionJobInfos {
-		minionJobInfos[i] = <-ch
-	}
-
-	// Build overall status
+	// For holding overall result of this call and status of individual minions
 	overallStatus := proto.GeneralStatus{
 		IsOk:          true,
 		FailureReason: "",
 	}
-	for _, ms := range minionJobInfos {
-		if !ms.Status.IsOk {
-			overallStatus.IsOk = false
-			overallStatus.FailureReason = "errors encountered on one or more minions"
+	minionJobInfos := make([]*proto.MinionJobInfo, numMinions)
+
+	// Collect execution results
+	for i, _ = range minionJobInfos {
+		select {
+		case res := <-rchs[i]:
+			minionJobInfos[i] = &proto.MinionJobInfo{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          res.GetStatus().GetIsOk(),
+					FailureReason: res.GetStatus().GetFailureReason(),
+				},
+				JobInfo: res.GetJobInfo(),
+			}
+		case err := <-echs[i]:
+			overallStatus = proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "errors encountered on one or more minions",
+			}
+			minionJobInfos[i] = &proto.MinionJobInfo{
+				Addr: addrs[i],
+				Status: &proto.GeneralStatus{
+					IsOk:          false,
+					FailureReason: err.Error(),
+				},
+			}
 		}
 	}
 
