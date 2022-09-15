@@ -120,7 +120,7 @@ func (p *MinionProxy) Addr() string {
 	return p.addr
 }
 
-func (p *MinionProxy) WatchCh() chan WatchState {
+func (p *MinionProxy) Watch() <-chan WatchState {
 	p.mut.Lock()
 	defer p.mut.Unlock()
 	return p.watchCh
@@ -216,12 +216,12 @@ func (p *MinionProxy) PrepareJobSync(ctx context.Context, jobName string,
 	}
 
 	p.watchCh = make(chan WatchState, 1)
-	p.Watch(res.GetPid())
+	p.WatchMinion(res.GetPid())
 
 	//TODO: This is temp code to be removed later
 	go func(addr string) {
-		s := <-p.WatchCh()
-		fmt.Printf("Minion %s: got watch status: %s\n", addr, s.String())
+		s := <-p.Watch()
+		log.Warnf("Minion %s: got watch status: %s", addr, s.String())
 	}(p.addr)
 	return res, nil
 }
@@ -339,7 +339,7 @@ func (p *MinionProxy) QueryJobSync(ctx context.Context) (*proto.MinionQueryJobRe
 	return res, nil
 }
 
-func (p *MinionProxy) Watch(pid string) {
+func (p *MinionProxy) WatchMinion(pid string) {
 	go func() {
 		unreachableCount := 0
 		errorCount := 0
@@ -350,7 +350,7 @@ func (p *MinionProxy) Watch(pid string) {
 			// Was the minion reachable?
 			if err != nil {
 				unreachableCount++
-				log.Warnf("Watch(): %s unreachable. count=%d reason=%s", p.addr, unreachableCount, err.Error())
+				log.Warnf("WatchMinion(): %s unreachable. count=%d reason=%s", p.addr, unreachableCount, err.Error())
 				if unreachableCount >= unreachableThreshold {
 					p.watchCh <- Unreachable
 					return
@@ -364,7 +364,7 @@ func (p *MinionProxy) Watch(pid string) {
 
 			// Was it the same incarnation of the minion?
 			if res.GetPid() != pid {
-				log.Warnf("Watch(): %s restarted. pid-expected=%s pid-actual=%s", p.addr, pid, res.GetPid())
+				log.Warnf("WatchMinion(): %s restarted. pid-expected=%s pid-actual=%s", p.addr, pid, res.GetPid())
 				p.watchCh <- Restarted
 				return
 			}
@@ -372,7 +372,7 @@ func (p *MinionProxy) Watch(pid string) {
 			// Did the minion have a valid response
 			if !res.GetStatus().GetIsOk() {
 				errorCount++
-				log.Warnf("Watch(): %s error. count=%d reason=%s", p.addr, errorCount, err.Error())
+				log.Warnf("WatchMinion(): %s error. count=%d reason=%s", p.addr, errorCount, err.Error())
 				if errorCount >= errorThreshold {
 					p.watchCh <- Errored
 					return
@@ -390,15 +390,15 @@ func (p *MinionProxy) Watch(pid string) {
 			case proto.JobState_RUNNING:
 				// Nothing to do
 			case proto.JobState_ENDED_SUCCESS:
-				log.Warnf("Watch(): %s. EndedSuccess", p.addr)
+				log.Warnf("WatchMinion(): %s. EndedSuccess", p.addr)
 				p.watchCh <- EndedSuccess
 				return
 			case proto.JobState_ENDED_FAILURE:
-				log.Warnf("Watch(): %s. EndedFailure", p.addr)
+				log.Warnf("WatchMinion(): %s. EndedFailure", p.addr)
 				p.watchCh <- EndedFailure
 				return
 			case proto.JobState_ENDED_ABORTED:
-				log.Warnf("Watch(): %s. EndedAborted", p.addr)
+				log.Warnf("WatchMinion(): %s. EndedAborted", p.addr)
 				p.watchCh <- EndedAborted
 				return
 			default:

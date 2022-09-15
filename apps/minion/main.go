@@ -12,6 +12,7 @@ const (
 	defaultGrpcPort    = "5711"
 	defaultMetricsPort = "9090"
 	defaultBossPort    = "5710"
+	defaultLogLevel    = "warn"
 )
 
 func main() {
@@ -24,7 +25,21 @@ func main() {
 	metricsAddr := flag.String("metrics-addr", defaultMetricsAddr, "listening host[:port] for metrics scraping")
 	advertiseAddr := flag.String("advertise-addr", defaultGrpcAddr, "gRPC host[:port] to advertise externally")
 	bossAddr := flag.String("boss", "", "boss host[:port]")
+	logLevel := flag.String("log-level", defaultLogLevel, "log level [debug|info|error|warn")
 	flag.Parse()
+
+	switch *logLevel {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.Errorf("bad log level setting: %s", *logLevel)
+	}
 
 	log.Infof("Starting diligent-minion process\n")
 	log.Infof("Build information:")

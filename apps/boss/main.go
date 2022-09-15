@@ -10,6 +10,7 @@ import (
 const (
 	defaultGrpcHost = ""
 	defaultGrpcPort = "5710"
+	defaultLogLevel = "warn"
 )
 
 func main() {
@@ -17,7 +18,21 @@ func main() {
 
 	// Parse command line options
 	grpcAddr := flag.String("grpc-addr", defaultGrpcAddr, "listening host[:port] for gRPC connections")
+	logLevel := flag.String("log-level", defaultLogLevel, "log level [debug|info|error|warn")
 	flag.Parse()
+
+	switch *logLevel {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.Errorf("bad log level setting: %s", *logLevel)
+	}
 
 	log.Printf("Starting diligent-boss process\n")
 	log.Printf("Build information:")
@@ -26,6 +41,7 @@ func main() {
 	log.Printf("build-time : %s\n", buildinfo.BuildTime)
 	log.Printf("Arguments:")
 	log.Printf("grpc-addr  : %s\n", *grpcAddr)
+	log.Printf("log-level  : %s\n", *logLevel)
 
 	// If no port is specified for gRPC listener, use default gRPC port
 	if _, _, err := net.SplitHostPort(*grpcAddr); err != nil {
