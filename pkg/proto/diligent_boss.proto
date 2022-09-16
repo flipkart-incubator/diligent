@@ -12,7 +12,7 @@ service Boss {
   // Minions Management
   rpc RegisterMinion (BossRegisterMinionRequest) returns (BossRegisterMinionResponse);
   rpc UnregisterMinion (BossUnregisterMinionRequest) returns (BossUnregisterMinionResponse);
-  rpc GetMinions (BossGetMinionsRequest) returns (BossGetMinionsResponse);
+  rpc GetMinionInfo (BossGetMinionInfoRequest) returns (BossGetMinionInfoResponse);
 
   // Job Control
   rpc PrepareJob (BossPrepareJobRequest) returns (BossPrepareJobResponse);
@@ -58,10 +58,10 @@ message MinionStatus {
   GeneralStatus status = 2;
 }
 
-message BossGetMinionsRequest {
+message BossGetMinionInfoRequest {
 }
 
-message BossGetMinionsResponse {
+message BossGetMinionInfoResponse {
   repeated MinionInfo minion_infos = 1;
 }
 

@@ -27,7 +27,7 @@ type BossClient interface {
 	// Minions Management
 	RegisterMinion(ctx context.Context, in *BossRegisterMinionRequest, opts ...grpc.CallOption) (*BossRegisterMinionResponse, error)
 	UnregisterMinion(ctx context.Context, in *BossUnregisterMinionRequest, opts ...grpc.CallOption) (*BossUnregisterMinionResponse, error)
-	GetMinions(ctx context.Context, in *BossGetMinionsRequest, opts ...grpc.CallOption) (*BossGetMinionsResponse, error)
+	GetMinionInfo(ctx context.Context, in *BossGetMinionInfoRequest, opts ...grpc.CallOption) (*BossGetMinionInfoResponse, error)
 	// Job Control
 	PrepareJob(ctx context.Context, in *BossPrepareJobRequest, opts ...grpc.CallOption) (*BossPrepareJobResponse, error)
 	RunJob(ctx context.Context, in *BossRunJobRequest, opts ...grpc.CallOption) (*BossRunJobResponse, error)
@@ -70,9 +70,9 @@ func (c *bossClient) UnregisterMinion(ctx context.Context, in *BossUnregisterMin
 	return out, nil
 }
 
-func (c *bossClient) GetMinions(ctx context.Context, in *BossGetMinionsRequest, opts ...grpc.CallOption) (*BossGetMinionsResponse, error) {
-	out := new(BossGetMinionsResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/GetMinions", in, out, opts...)
+func (c *bossClient) GetMinionInfo(ctx context.Context, in *BossGetMinionInfoRequest, opts ...grpc.CallOption) (*BossGetMinionInfoResponse, error) {
+	out := new(BossGetMinionInfoResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/GetMinionInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ type BossServer interface {
 	// Minions Management
 	RegisterMinion(context.Context, *BossRegisterMinionRequest) (*BossRegisterMinionResponse, error)
 	UnregisterMinion(context.Context, *BossUnregisterMinionRequest) (*BossUnregisterMinionResponse, error)
-	GetMinions(context.Context, *BossGetMinionsRequest) (*BossGetMinionsResponse, error)
+	GetMinionInfo(context.Context, *BossGetMinionInfoRequest) (*BossGetMinionInfoResponse, error)
 	// Job Control
 	PrepareJob(context.Context, *BossPrepareJobRequest) (*BossPrepareJobResponse, error)
 	RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error)
@@ -146,8 +146,8 @@ func (UnimplementedBossServer) RegisterMinion(context.Context, *BossRegisterMini
 func (UnimplementedBossServer) UnregisterMinion(context.Context, *BossUnregisterMinionRequest) (*BossUnregisterMinionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnregisterMinion not implemented")
 }
-func (UnimplementedBossServer) GetMinions(context.Context, *BossGetMinionsRequest) (*BossGetMinionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMinions not implemented")
+func (UnimplementedBossServer) GetMinionInfo(context.Context, *BossGetMinionInfoRequest) (*BossGetMinionInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMinionInfo not implemented")
 }
 func (UnimplementedBossServer) PrepareJob(context.Context, *BossPrepareJobRequest) (*BossPrepareJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PrepareJob not implemented")
@@ -228,20 +228,20 @@ func _Boss_UnregisterMinion_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_GetMinions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BossGetMinionsRequest)
+func _Boss_GetMinionInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossGetMinionInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).GetMinions(ctx, in)
+		return srv.(BossServer).GetMinionInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/GetMinions",
+		FullMethod: "/proto.Boss/GetMinionInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).GetMinions(ctx, req.(*BossGetMinionsRequest))
+		return srv.(BossServer).GetMinionInfo(ctx, req.(*BossGetMinionInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -338,8 +338,8 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Boss_UnregisterMinion_Handler,
 		},
 		{
-			MethodName: "GetMinions",
-			Handler:    _Boss_GetMinions_Handler,
+			MethodName: "GetMinionInfo",
+			Handler:    _Boss_GetMinionInfo_Handler,
 		},
 		{
 			MethodName: "PrepareJob",

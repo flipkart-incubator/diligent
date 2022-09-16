@@ -135,8 +135,8 @@ func (s *BossServer) UnregisterMinion(_ context.Context, in *proto.BossUnregiste
 	}, nil
 }
 
-func (s *BossServer) GetMinions(ctx context.Context, _ *proto.BossGetMinionsRequest) (*proto.BossGetMinionsResponse, error) {
-	log.Infof("GRPC: GetMinions()")
+func (s *BossServer) GetMinionInfo(ctx context.Context, _ *proto.BossGetMinionInfoRequest) (*proto.BossGetMinionInfoResponse, error) {
+	log.Infof("GRPC: GetMinionInfo()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -149,7 +149,7 @@ func (s *BossServer) GetMinions(ctx context.Context, _ *proto.BossGetMinionsRequ
 	// Invoke on individual minions
 	i := 0
 	for addr, proxy := range s.registry.Minions() {
-		log.Infof("Ping(): Triggering run on Minion %s", addr)
+		log.Infof("GetMinionInfo(): Getting info from Minion %s", addr)
 		addrs[i] = addr
 		rchs[i], echs[i] = proxy.PingAsync(ctx)
 		i++
@@ -183,8 +183,8 @@ func (s *BossServer) GetMinions(ctx context.Context, _ *proto.BossGetMinionsRequ
 		}
 	}
 
-	log.Infof("Ping(): completed")
-	return &proto.BossGetMinionsResponse{
+	log.Infof("GetMinionInfo(): completed")
+	return &proto.BossGetMinionInfoResponse{
 		MinionInfos: minionInfos,
 	}, nil
 }

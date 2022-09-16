@@ -130,7 +130,7 @@ func minionInfo(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.GetMinions(grpcCtx, &proto.BossGetMinionsRequest{})
+	res, err := bossClient.GetMinionInfo(grpcCtx, &proto.BossGetMinionInfoRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 	if err != nil {
@@ -248,7 +248,7 @@ func minionAwaitCount(c *grumble.Context) error {
 	defer cancel()
 	for {
 		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
-		res, err := bossClient.GetMinions(grpcCtx, &proto.BossGetMinionsRequest{})
+		res, err := bossClient.GetMinionInfo(grpcCtx, &proto.BossGetMinionInfoRequest{})
 		grpcCancel()
 		if err != nil {
 			c.App.Printf("Request to boss failed (%s)\n", err.Error())
