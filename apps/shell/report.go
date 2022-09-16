@@ -38,7 +38,7 @@ func init() {
 func reportSave(c *grumble.Context) error {
 	promAddr := c.Flags.String("prom")
 
-	c.App.Printf("Getting timespan for current job...")
+	c.App.Printf("Getting timespan for current job...\n")
 	startTime, endTime, stepSize, err := getTimes(c)
 	if err != nil {
 		return err
@@ -102,11 +102,11 @@ func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.D
 		err = fmt.Errorf("unable to generate report. job has not yet ended")
 		return
 	case proto.JobState_ENDED_SUCCESS:
-		c.App.Printf("Job ended successfully")
+		c.App.Printf("Job ended successfully\n")
 	case proto.JobState_ENDED_FAILURE:
-		c.App.Printf("Warning: job ended with failure")
+		c.App.Printf("Warning: job ended with failure\n")
 	case proto.JobState_ENDED_ABORTED:
-		c.App.Printf("Warning: job was aborted")
+		c.App.Printf("Warning: job was aborted\n")
 	}
 
 	// Capture metrics from 2 mins before and after with 1min rounding
