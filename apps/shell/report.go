@@ -27,61 +27,58 @@ func init() {
 	}
 	grumbleApp.AddCommand(reportCmd)
 
-	reportSaveCmd := &grumble.Command{
+	reportJobCmd := &grumble.Command{
 		Name: "job",
 		Help: "generate a report for the current job",
 		Run:  reportJob,
 	}
-	reportCmd.AddCommand(reportSaveCmd)
+	reportCmd.AddCommand(reportJobCmd)
+
+	reportExpCmd := &grumble.Command{
+		Name: "experiment",
+		Help: "generate a report for the current experiment",
+		Run:  reportExperiment,
+	}
+	reportCmd.AddCommand(reportExpCmd)
 }
 
 func reportJob(c *grumble.Context) error {
-	promAddr := c.Flags.String("prom")
-
-	c.App.Printf("Getting regarding current job...\n")
 	jobName, startTime, endTime, stepSize, err := getJobParams(c)
 	if err != nil {
 		return err
 	}
-	c.App.Printf("job-name: %s\n", jobName)
-	c.App.Printf("start-time: %s\n", startTime.Format(time.UnixDate))
-	c.App.Printf("end-time: %s\n", endTime.Format(time.UnixDate))
-	c.App.Printf("step-duration: %s\n", stepSize.String())
 
-	c.App.Printf("Getting data for panels and creating charts...\n")
-	chs := make([]components.Charter, 0)
-	for _, p := range panels {
-		ch := newLineChart(p, startTime, endTime)
-		for _, q := range p.queries {
-			metrics, err := promQuery(promAddr, q.query, startTime, endTime, stepSize)
-			if err != nil {
-				return err
-			}
-			err = plotData(ch, metrics, q)
-			if err != nil {
-				return err
-			}
-		}
-		chs = append(chs, ch)
+	chs, err := makePanels(c, startTime, endTime, stepSize)
+	if err != nil {
+		return err
 	}
 
-	c.App.Printf("Generating and saving report...\n")
-	page := components.NewPage()
-	page.AddCharts(chs...)
 	fileName := fmt.Sprintf("%s-job-report.html", jobName)
-	f, err := os.Create(fileName)
+	err = saveReport(c, chs, fileName)
+
+	return err
+}
+
+func reportExperiment(c *grumble.Context) error {
+	expName, startTime, endTime, stepSize, err := getExperimentParams(c)
 	if err != nil {
 		return err
 	}
-	err = page.Render(io.MultiWriter(f))
+
+	chs, err := makePanels(c, startTime, endTime, stepSize)
 	if err != nil {
 		return err
 	}
-	c.App.Printf("Report saved: %s\n", fileName)
-	return nil
+
+	fileName := fmt.Sprintf("%s-experiment-report.html", expName)
+	err = saveReport(c, chs, fileName)
+
+	return err
 }
 
 func getJobParams(c *grumble.Context) (jobName string, startTime, endTime time.Time, stepSize time.Duration, err error) {
+	c.App.Printf("Getting info about current job...\n")
+
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -123,11 +120,88 @@ func getJobParams(c *grumble.Context) (jobName string, startTime, endTime time.T
 		return
 	}
 	stepSize = 10 * time.Second
+
+	c.App.Printf("job-name     : %s\n", jobName)
+	c.App.Printf("start-time   : %s\n", startTime.Format(time.UnixDate))
+	c.App.Printf("end-time     : %s\n", endTime.Format(time.UnixDate))
+	c.App.Printf("step-duration: %s\n", stepSize.String())
+
 	return
 }
 
-func promQuery(server, query string, startTime, endTime time.Time, step time.Duration) (model.Matrix, error) {
-	client, err := api.NewClient(api.Config{Address: server})
+func getExperimentParams(c *grumble.Context) (expName string, startTime, endTime time.Time, stepSize time.Duration, err error) {
+	c.App.Printf("Getting info about current experiment...\n")
+
+	bossAddr := c.Flags.String("boss")
+	bossClient, err := getBossClient(bossAddr)
+	if err != nil {
+		return
+	}
+
+	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
+	res, err := bossClient.GetExperimentInfo(grpcCtx, &proto.BossGetExperimentInfoRequest{})
+	grpcCancel()
+	if err != nil {
+		return
+	}
+
+	if res.GetExperimentInfo() == nil {
+		err = fmt.Errorf("no current experiment. unable to generate report")
+		return
+	}
+
+	expName = res.GetExperimentInfo().GetName()
+
+	switch res.GetExperimentInfo().GetState() {
+	case proto.ExperimentState_NEW_EXPERIMENT, proto.ExperimentState_STARTED:
+		err = fmt.Errorf("unable to generate report. experiment has not yet ended")
+		return
+	case proto.ExperimentState_STOPPED:
+		c.App.Printf("Experiment has stopped\n")
+	}
+
+	// Capture metrics from 2 mins before and after with 1min rounding
+	startTime = time.UnixMilli(res.GetExperimentInfo().GetStartTime()).Add(-2 * time.Minute).Round(1 * time.Minute)
+	endTime = time.UnixMilli(res.GetExperimentInfo().GetStopTime()).Add(2 * time.Minute).Round(1 * time.Minute)
+
+	if startTime.After(endTime) {
+		err = fmt.Errorf("calculated startTime %s is before end time %s", startTime.Format(time.UnixDate), endTime.Format(time.UnixDate))
+		return
+	}
+	stepSize = 10 * time.Second
+
+	c.App.Printf("experiment-name: %s\n", expName)
+	c.App.Printf("start-time     : %s\n", startTime.Format(time.UnixDate))
+	c.App.Printf("end-time       : %s\n", endTime.Format(time.UnixDate))
+	c.App.Printf("step-duration  : %s\n", stepSize.String())
+
+	return
+}
+
+func makePanels(c *grumble.Context, startTime, endTime time.Time, stepSize time.Duration) ([]components.Charter, error) {
+	c.App.Printf("Getting data for panels and creating charts...\n")
+	chs := make([]components.Charter, 0)
+	for _, p := range panels {
+		ch := newLineChart(p, startTime, endTime)
+		for _, q := range p.queries {
+			metrics, err := promQuery(c, q.query, startTime, endTime, stepSize)
+			if err != nil {
+				return nil, err
+			}
+			err = plotData(ch, metrics, q)
+			if err != nil {
+				return nil, err
+			}
+		}
+		chs = append(chs, ch)
+	}
+	return chs, nil
+}
+
+func promQuery(c *grumble.Context, query string, startTime, endTime time.Time, step time.Duration) (model.Matrix, error) {
+	promAddr := c.Flags.String("prom")
+
+	client, err := api.NewClient(api.Config{Address: promAddr})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create prometheus api client: %v", err)
 	}
@@ -207,6 +281,22 @@ func plotData(chart *charts.Line, metrics model.Matrix, q Query) error {
 		}
 		chart.AddSeries(b.String(), items)
 	}
+	return nil
+}
+
+func saveReport(c *grumble.Context, chs []components.Charter, fileName string) error {
+	c.App.Printf("Generating and saving report...\n")
+	page := components.NewPage()
+	page.AddCharts(chs...)
+	f, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	err = page.Render(io.MultiWriter(f))
+	if err != nil {
+		return err
+	}
+	c.App.Printf("Report saved: %s\n", fileName)
 	return nil
 }
 
