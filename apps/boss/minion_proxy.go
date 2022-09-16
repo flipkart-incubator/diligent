@@ -20,25 +20,10 @@ const (
 	errorThreshold            = 3
 )
 
-//type MinionState int
-//
-//const (
-//	_ MinionState = iota
-//	MinionIdle
-//	MinionPrepared
-//	MinionRunning
-//	MinionEndedSuccess
-//	MinionEndedFailure
-//	MinionEndedAborted
-//	MinionUnreachable
-//	MinionRestarted
-//	MinionErrored
-//)
-
-type WatchState int
+type MinionWatchStatus int
 
 const (
-	_ WatchState = iota
+	_ MinionWatchStatus = iota
 	EndedSuccess
 	EndedFailure
 	EndedAborted
@@ -47,7 +32,7 @@ const (
 	Errored
 )
 
-func (w WatchState) String() string {
+func (w MinionWatchStatus) String() string {
 	switch w {
 	case EndedSuccess:
 		return "EndedSuccess"
@@ -73,7 +58,7 @@ type MinionProxy struct {
 	mut     sync.Mutex // Must be taken for all operations on the MinionProxy
 	addr    string
 	pool    *grpcpool.Pool
-	watchCh chan WatchState
+	watchCh chan MinionWatchStatus
 }
 
 func NewMinionProxy(addr string) (*MinionProxy, error) {
@@ -120,7 +105,7 @@ func (p *MinionProxy) Addr() string {
 	return p.addr
 }
 
-func (p *MinionProxy) Watch() <-chan WatchState {
+func (p *MinionProxy) Watch() <-chan MinionWatchStatus {
 	p.mut.Lock()
 	defer p.mut.Unlock()
 	return p.watchCh
@@ -215,14 +200,14 @@ func (p *MinionProxy) PrepareJobSync(ctx context.Context, jobName string,
 		return nil, e
 	}
 
-	p.watchCh = make(chan WatchState, 1)
+	p.watchCh = make(chan MinionWatchStatus, 1)
 	p.WatchMinion(res.GetPid())
 
 	//TODO: This is temp code to be removed later
-	go func(addr string) {
-		s := <-p.Watch()
-		log.Warnf("Minion %s: got watch status: %s", addr, s.String())
-	}(p.addr)
+	//go func(addr string) {
+	//	s := <-p.Watch()
+	//	log.Warnf("Minion %s: got watch status: %s", addr, s.String())
+	//}(p.addr)
 	return res, nil
 }
 
