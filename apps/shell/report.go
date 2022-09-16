@@ -101,10 +101,12 @@ func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.D
 	case proto.JobState_NEW, proto.JobState_PREPARED, proto.JobState_RUNNING:
 		err = fmt.Errorf("unable to generate report. job has not yet ended")
 		return
+	case proto.JobState_ENDED_SUCCESS:
+		c.App.Printf("Job ended successfully")
 	case proto.JobState_ENDED_FAILURE:
-		fmt.Printf("Warning: job ended with failure")
+		c.App.Printf("Warning: job ended with failure")
 	case proto.JobState_ENDED_ABORTED:
-		fmt.Printf("Warning: job was aborted")
+		c.App.Printf("Warning: job was aborted")
 	}
 
 	// Capture metrics from 2 mins before and after with 1min rounding
