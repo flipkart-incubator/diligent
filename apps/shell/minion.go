@@ -188,7 +188,7 @@ func showMinionProcessInfo(c *grumble.Context, pi *proto.ProcessInfo) {
 	c.App.Printf("\tstart-time: %s (%s ago)\n", startTime.Format(time.UnixDate), upTime.String())
 }
 
-func showMinionJobInfo(c *grumble.Context, ji *proto.JobInfo) {
+func showMinionJobInfo(c *grumble.Context, ji *proto.MinionJobInfo) {
 	if ji == nil {
 		c.App.Printf("[No job info]\n")
 		return

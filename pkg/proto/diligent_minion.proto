@@ -22,7 +22,7 @@ message MinionPingRequest {
 message MinionPingResponse {
   BuildInfo build_info = 1;
   ProcessInfo process_info = 2;
-  JobInfo job_info = 3;
+  MinionJobInfo job_info = 3;
 }
 
 message MinionPrepareJobRequest {
@@ -56,5 +56,5 @@ message MinionQueryJobRequest {
 message MinionQueryJobResponse {
   GeneralStatus status = 1;
   string pid = 2;
-  JobInfo job_info = 3;
+  MinionJobInfo job_info = 3;
 }

@@ -68,11 +68,11 @@ type JobInfo struct {
 	nonFatalErrors int
 }
 
-func (j *JobInfo) ToProto() *proto.JobInfo {
+func (j *JobInfo) ToProto() *proto.MinionJobInfo {
 	if j == nil {
 		return nil
 	}
-	return &proto.JobInfo{
+	return &proto.MinionJobInfo{
 		JobName:        j.name,
 		JobSpec:        j.spec,
 		JobState:       j.state.ToProto(),

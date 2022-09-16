@@ -18,7 +18,7 @@ service Boss {
   rpc PrepareJob (BossPrepareJobRequest) returns (BossPrepareJobResponse);
   rpc RunJob (BossRunJobRequest) returns (BossRunJobResponse);
   rpc AbortJob (BossAbortJobRequest) returns (BossAbortJobResponse);
-  rpc QueryJob (BossQueryJobRequest) returns (BossQueryJobResponse);
+  rpc GetJobInfo (BossGetJobInfoRequest) returns (BossGetJobInfoResponse);
 }
 
 message BossPingRequest {
@@ -50,7 +50,7 @@ message MinionInfo {
   GeneralStatus reachability = 2;
   BuildInfo build_info = 3;
   ProcessInfo process_info = 4;
-  JobInfo job_info = 5;
+  MinionJobInfo job_info = 5;
 }
 
 message MinionStatus {
@@ -90,16 +90,19 @@ message BossAbortJobResponse {
     repeated MinionStatus minion_statuses = 2;
 }
 
-message MinionJobInfo {
-  string addr = 1;
-  GeneralStatus status = 2;
-  JobInfo job_info = 3;
+message BossJobInfo {
+  JobSpec job_spec = 1;
+  JobState job_state = 2;
+  int64 prepare_time = 3;
+  int64 run_time = 4;
+  int64 end_time = 5;
+  repeated string minion_addrs = 6;
 }
 
-message BossQueryJobRequest {
+message BossGetJobInfoRequest {
 }
 
-message BossQueryJobResponse {
+message BossGetJobInfoResponse {
   GeneralStatus status = 1;
-  repeated MinionJobInfo minion_job_infos = 2;
+  BossJobInfo job_info = 2;
 }

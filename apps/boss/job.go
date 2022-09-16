@@ -41,12 +41,54 @@ func (j JobState) String() string {
 	}
 }
 
+func (j JobState) ToProto() proto.JobState {
+	switch j {
+	case JobNew:
+		return proto.JobState_NEW
+	case JobPrepared:
+		return proto.JobState_PREPARED
+	case JobRunning:
+		return proto.JobState_RUNNING
+	case JobEndedSuccess:
+		return proto.JobState_ENDED_SUCCESS
+	case JobEndedFailure:
+		return proto.JobState_ENDED_FAILURE
+	case JobEndedAborted:
+		return proto.JobState_ENDED_ABORTED
+	}
+	panic(fmt.Errorf("unknown job state %d", j))
+}
+
+type JobInfo struct {
+	spec        *proto.JobSpec
+	state       JobState
+	prepareTime time.Time
+	runTime     time.Time
+	endTime     time.Time
+	minionAddrs []string
+}
+
+func (j *JobInfo) ToProto() *proto.BossJobInfo {
+	if j == nil {
+		return nil
+	}
+	return &proto.BossJobInfo{
+		JobSpec:     j.spec,
+		JobState:    j.state.ToProto(),
+		PrepareTime: j.prepareTime.UnixMilli(),
+		RunTime:     j.runTime.UnixMilli(),
+		EndTime:     j.endTime.UnixMilli(),
+		MinionAddrs: j.minionAddrs,
+	}
+}
+
 type Job struct {
 	mut sync.Mutex
 
 	name            string
+	spec            *proto.JobSpec
+	state           JobState
 	minions         map[string]*MinionProxy
-	jobState        JobState
 	minionEndStates []MinionWatchStatus
 
 	createTime  time.Time
@@ -55,11 +97,12 @@ type Job struct {
 	endTime     time.Time
 }
 
-func NewJob(name string, minions map[string]*MinionProxy) *Job {
+func NewJob(spec *proto.JobSpec, minions map[string]*MinionProxy) *Job {
 	return &Job{
-		name:            name,
+		name:            spec.GetJobName(),
+		spec:            spec,
+		state:           JobNew,
 		minions:         minions,
-		jobState:        JobNew,
 		minionEndStates: make([]MinionWatchStatus, len(minions)),
 		createTime:      time.Now(),
 	}
@@ -68,8 +111,8 @@ func NewJob(name string, minions map[string]*MinionProxy) *Job {
 func (j *Job) HasEnded() bool {
 	j.mut.Lock()
 	defer j.mut.Unlock()
-	log.Infof("job.HasEnded(): name=%s, current state = %s", j.name, j.jobState.String())
-	switch j.jobState {
+	log.Infof("job.HasEnded(): name=%s, current state = %s", j.name, j.state.String())
+	switch j.state {
 	case JobEndedSuccess, JobEndedFailure, JobEndedAborted:
 		log.Infof("job.HasEnded(): true")
 		return true
@@ -88,22 +131,39 @@ func (j *Job) Name() string {
 func (j *Job) State() JobState {
 	j.mut.Lock()
 	defer j.mut.Unlock()
-	return j.jobState
+	return j.state
 }
 
-func (j *Job) Prepare(ctx context.Context, in *proto.BossPrepareJobRequest) (*proto.BossPrepareJobResponse, error) {
+func (j *Job) Info() *JobInfo {
+	j.mut.Lock()
+	defer j.mut.Unlock()
+	minionAddrs := make([]string, 0)
+	for addr := range j.minions {
+		minionAddrs = append(minionAddrs, addr)
+	}
+	return &JobInfo{
+		spec:        j.spec,
+		state:       j.state,
+		prepareTime: j.prepareTime,
+		runTime:     j.runTime,
+		endTime:     j.endTime,
+		minionAddrs: minionAddrs,
+	}
+}
+
+func (j *Job) Prepare(ctx context.Context) (*proto.BossPrepareJobResponse, error) {
 	j.mut.Lock()
 	defer j.mut.Unlock()
 
 	// Partition the data among the number of minions
-	dataSpec := proto.DataSpecFromProto(in.GetJobSpec().GetDataSpec())
+	dataSpec := proto.DataSpecFromProto(j.spec.GetDataSpec())
 	numRecs := dataSpec.KeyGenSpec.NumKeys()
 	fullRange := intgen.NewRange(0, numRecs)
 	numMinions := len(j.minions)
 	var assignedRanges []*intgen.Range
 
 	// Get the job level workload spec, and do homework to determine per-minion workload spec
-	workloadName := in.GetJobSpec().GetWorkloadSpec().GetWorkloadName()
+	workloadName := j.spec.GetWorkloadSpec().GetWorkloadName()
 	switch workloadName {
 	case "insert", "insert-txn", "delete", "delete-txn":
 		assignedRanges = fullRange.Partition(numMinions)
@@ -131,16 +191,16 @@ func (j *Job) Prepare(ctx context.Context, in *proto.BossPrepareJobRequest) (*pr
 	for addr, proxy := range j.minions {
 		log.Infof("PrepareJob(): Preparing Minion %s", addr)
 		wlSpec := &proto.WorkloadSpec{
-			WorkloadName:  in.GetJobSpec().GetWorkloadSpec().GetWorkloadName(),
+			WorkloadName:  j.spec.GetWorkloadSpec().GetWorkloadName(),
 			AssignedRange: proto.RangeToProto(assignedRanges[i]),
-			TableName:     in.GetJobSpec().GetWorkloadSpec().GetTableName(),
-			DurationSec:   in.GetJobSpec().GetWorkloadSpec().GetDurationSec(),
-			Concurrency:   in.GetJobSpec().GetWorkloadSpec().GetConcurrency(),
-			BatchSize:     in.GetJobSpec().GetWorkloadSpec().GetBatchSize(),
+			TableName:     j.spec.GetWorkloadSpec().GetTableName(),
+			DurationSec:   j.spec.GetWorkloadSpec().GetDurationSec(),
+			Concurrency:   j.spec.GetWorkloadSpec().GetConcurrency(),
+			BatchSize:     j.spec.GetWorkloadSpec().GetBatchSize(),
 		}
 
 		addrs[i] = addr
-		rchs[i], echs[i] = proxy.PrepareJobAsync(ctx, in.GetJobSpec().GetJobName(), in.GetJobSpec().GetDataSpec(), in.GetJobSpec().GetDbSpec(), wlSpec)
+		rchs[i], echs[i] = proxy.PrepareJobAsync(ctx, j.spec.GetJobName(), j.spec.GetDataSpec(), j.spec.GetDbSpec(), wlSpec)
 		i++
 	}
 
@@ -177,7 +237,7 @@ func (j *Job) Prepare(ctx context.Context, in *proto.BossPrepareJobRequest) (*pr
 		}
 	}
 
-	j.jobState = JobPrepared
+	j.state = JobPrepared
 	j.prepareTime = time.Now()
 	go j.WatchForEnd()
 	log.Infof("PrepareJob(): completed")
@@ -240,7 +300,7 @@ func (j *Job) Run(ctx context.Context) (*proto.BossRunJobResponse, error) {
 		}
 	}
 
-	j.jobState = JobRunning
+	j.state = JobRunning
 	j.runTime = time.Now()
 	log.Infof("RunJob(): completed")
 	return &proto.BossRunJobResponse{
@@ -340,7 +400,7 @@ func (j *Job) WatchForEnd() {
 
 	j.mut.Lock()
 	defer j.mut.Unlock()
-	j.jobState = jobEndStatus
+	j.state = jobEndStatus
 	j.endTime = time.Now()
-	log.Warnf("Job %s ended: status=%s, time=%s", j.name, j.jobState.String(), j.endTime.Format(time.UnixDate))
+	log.Warnf("Job %s ended: status=%s, time=%s", j.name, j.state.String(), j.endTime.Format(time.UnixDate))
 }

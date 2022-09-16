@@ -135,19 +135,19 @@ func jobPrepare(c *grumble.Context) error {
 	}
 
 	c.App.Println("Preparing job:")
-	c.App.Println("    DataSpec:")
-	c.App.Println("    	file:", dataspecFileName)
-	c.App.Println("    	numRows:", dataSpec.KeyGenSpec.NumKeys())
-	c.App.Println("    	recordSize:", dataSpec.RecordSize)
-	c.App.Println("    DB:")
-	c.App.Println("    	driver:", dbDriver)
-	c.App.Println("    	url:", dbUrl)
-	c.App.Println("    Workload:")
-	c.App.Println("    	workload:", workloadName)
-	c.App.Println("    	table:", table)
-	c.App.Println("    	batchSize:", batchSize)
-	c.App.Println("    	concurrency:", concurrency)
-	c.App.Println("    	duration(s):", durationSec)
+	c.App.Println("DataSpec:")
+	c.App.Println("\tfile:", dataspecFileName)
+	c.App.Println("\tnumRows:", dataSpec.KeyGenSpec.NumKeys())
+	c.App.Println("\trecordSize:", dataSpec.RecordSize)
+	c.App.Println("DB:")
+	c.App.Println("\tdriver:", dbDriver)
+	c.App.Println("\turl:", dbUrl)
+	c.App.Println("Workload:")
+	c.App.Println("\tworkload:", workloadName)
+	c.App.Println("\ttable:", table)
+	c.App.Println("\tbatchSize:", batchSize)
+	c.App.Println("\tconcurrency:", concurrency)
+	c.App.Println("\tduration(s):", durationSec)
 
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -266,26 +266,53 @@ func jobInfo(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{})
+	res, err := bossClient.GetJobInfo(grpcCtx, &proto.BossGetJobInfoRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 
 	if err != nil {
 		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
 		return err
-	} else {
-		c.App.Printf("OK [elapsed=%v]\n", reqDuration)
+	}
+	if !res.GetStatus().GetIsOk() {
+		c.App.Printf("Request failed [elapsed=%v]\n", reqDuration)
+		return fmt.Errorf(res.GetStatus().GetFailureReason())
 	}
 
-	for _, mi := range res.GetMinionJobInfos() {
-		if !mi.GetStatus().GetIsOk() {
-			c.App.Printf("%s : %s\n", mi.GetAddr(), mi.GetStatus().GetFailureReason())
-			continue
-		}
-		c.App.Printf("%s : OK ", mi.GetAddr())
-		showMinionJobInfo(c, mi.GetJobInfo())
-	}
+	c.App.Printf("OK [elapsed=%v]\n", reqDuration)
+	showBossJobInfo(c, res.GetJobInfo())
 	return nil
+}
+
+func showBossJobInfo(c *grumble.Context, ji *proto.BossJobInfo) {
+	if ji == nil {
+		c.App.Printf("No current job\n")
+		return
+	}
+	ds := proto.DataSpecFromProto(ji.GetJobSpec().GetDataSpec())
+	c.App.Printf("\n")
+	c.App.Printf("job-name:  %s\n", ji.GetJobSpec().GetJobName())
+	c.App.Printf("job-state: %s\n", ji.GetJobState())
+	c.App.Printf("prepare-time: %s\n", time.UnixMilli(ji.GetPrepareTime()).Format(time.UnixDate))
+	c.App.Printf("run-time:     %s\n", time.UnixMilli(ji.GetRunTime()).Format(time.UnixDate))
+	c.App.Printf("end-time:     %s\n", time.UnixMilli(ji.GetEndTime()).Format(time.UnixDate))
+	c.App.Printf("data-spec:\n")
+	c.App.Printf("\tdata-num-recs: %d\n", ds.KeyGenSpec.NumKeys())
+	c.App.Printf("\tdata-rec-size: %d\n", ji.GetJobSpec().GetDataSpec().GetRecordSize())
+	c.App.Printf("db-spec:\n")
+	c.App.Printf("\tdb-driver: %s\n", ji.GetJobSpec().GetDbSpec().GetDriver())
+	c.App.Printf("\tdb-url:    %s\n", ji.GetJobSpec().GetDbSpec().GetUrl())
+	c.App.Printf("workload-spec:\n")
+	c.App.Printf("\tworkload-name:           %s\n", ji.GetJobSpec().GetWorkloadSpec().GetWorkloadName())
+	c.App.Printf("\ttable-name:              %s\n", ji.GetJobSpec().GetWorkloadSpec().GetTableName())
+	c.App.Printf("\tworkload-assigned-range: %s\n", ji.GetJobSpec().GetWorkloadSpec().GetAssignedRange())
+	c.App.Printf("\tworkload-batch-size:     %d\n", ji.GetJobSpec().GetWorkloadSpec().GetBatchSize())
+	c.App.Printf("\tworkload-concurrency:    %d\n", ji.GetJobSpec().GetWorkloadSpec().GetConcurrency())
+	c.App.Printf("\tworkload-duration-sec:   %d\n", ji.GetJobSpec().GetWorkloadSpec().GetDurationSec())
+	c.App.Printf("minions:\n")
+	for _, ma := range ji.GetMinionAddrs() {
+		c.App.Printf("\t%s\n", ma)
+	}
 }
 
 func jobAwaitCompletion(c *grumble.Context) error {
@@ -297,55 +324,34 @@ func jobAwaitCompletion(c *grumble.Context) error {
 
 	timeout := c.Flags.Duration("timeout")
 
-	c.App.Printf("Waiting for current job %s to end. Wait timeout=%s\n", timeout.String())
+	c.App.Printf("Waiting for current job to end. Wait timeout=%s\n", timeout.String())
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	for {
-		c.App.Printf(".")
 		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
-		res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{})
+		res, err := bossClient.GetJobInfo(grpcCtx, &proto.BossGetJobInfoRequest{})
 		grpcCancel()
 		if err != nil {
 			c.App.Printf("Request to boss failed (%s)\n", err.Error())
 			continue
 		}
-		noStatus := 0
-		endedCount := 0
-		notSuccess := 0
-		for _, mi := range res.GetMinionJobInfos() {
-			if !mi.GetStatus().GetIsOk() {
-				c.App.Printf("%s: Encountered errors: (%s)\n", mi.GetAddr(), mi.GetStatus().GetFailureReason())
-				noStatus++
-				continue
-			}
-			switch mi.GetJobInfo().GetJobState() {
-			case proto.JobState_ENDED_SUCCESS:
-				c.App.Printf("%s: Ended successfully\n", mi.GetAddr())
-				endedCount++
-			case proto.JobState_ENDED_FAILURE:
-				c.App.Printf("%s: Ended with failure\n", mi.GetAddr())
-				endedCount++
-				notSuccess++
-			case proto.JobState_ENDED_ABORTED:
-				c.App.Printf("%s: Ended as aborted\n", mi.GetAddr())
-				endedCount++
-				notSuccess++
-			}
-		}
-		remaining := len(res.GetMinionJobInfos()) - (noStatus + endedCount)
-		if remaining == 0 {
-			if notSuccess > 0 {
-				c.App.Printf("Job ended. One or more minions did not end successfully\n")
-			} else {
-				c.App.Printf("Job ended successfully\n")
-			}
-			break
+		switch res.GetJobInfo().GetJobState() {
+		case proto.JobState_NEW, proto.JobState_PREPARED, proto.JobState_RUNNING:
+			c.App.Printf(".")
+		case proto.JobState_ENDED_SUCCESS:
+			c.App.Printf("\nJob has ended successfully\n")
+			return nil
+		case proto.JobState_ENDED_FAILURE:
+			c.App.Printf("\nJob has failed\n")
+			return nil
+		case proto.JobState_ENDED_ABORTED:
+			c.App.Printf("\nJob was aborted\n")
+			return nil
 		}
 		if ctx.Err() != nil {
 			return fmt.Errorf("timeout occurred. job has not ended yet")
 		}
 		time.Sleep(1 * time.Second)
 	}
-	return nil
 }

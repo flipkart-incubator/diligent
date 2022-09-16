@@ -38,12 +38,11 @@ func init() {
 func reportSave(c *grumble.Context) error {
 	promAddr := c.Flags.String("prom")
 
-	c.App.Printf("Discovering timespan for current job...")
+	c.App.Printf("Getting timespan for current job...")
 	startTime, endTime, stepSize, err := getTimes(c)
 	if err != nil {
 		return err
 	}
-	c.App.Printf("Proceeding with:\n")
 	c.App.Printf("start-time: %s\n", startTime.Format(time.UnixDate))
 	c.App.Printf("end-time: %s\n", endTime.Format(time.UnixDate))
 	c.App.Printf("step-duration: %s\n", stepSize.String())
@@ -87,76 +86,31 @@ func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.D
 	}
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
-	res, err := bossClient.QueryJob(grpcCtx, &proto.BossQueryJobRequest{})
+	res, err := bossClient.GetJobInfo(grpcCtx, &proto.BossGetJobInfoRequest{})
 	grpcCancel()
 	if err != nil {
 		return
 	}
 
-	unreachableCount := 0
-	endedCount := 0
-	notSuccess := 0
-	withoutJobInfoCount := 0
-	for _, ji := range res.GetMinionJobInfos() {
-		if !ji.GetStatus().GetIsOk() {
-			unreachableCount++
-			continue
-		}
-		if ji.GetJobInfo() == nil {
-			withoutJobInfoCount++
-			continue
-		}
-		switch ji.GetJobInfo().GetJobState() {
-		case proto.JobState_ENDED_SUCCESS:
-			endedCount++
-		case proto.JobState_ENDED_FAILURE:
-			endedCount++
-			notSuccess++
-		case proto.JobState_ENDED_ABORTED:
-			endedCount++
-			notSuccess++
-		}
-	}
-	totalMinions := len(res.GetMinionJobInfos())
-	notEnded := totalMinions - (unreachableCount + endedCount)
-	fmt.Printf("Total minions: %d\n", totalMinions)
-	fmt.Printf("Unreachable minions: %d\n", unreachableCount)
-	fmt.Printf("Ended minions: %d\n", endedCount)
-	fmt.Printf("Failed minions: %d\n", notSuccess)
-	fmt.Printf("Minions without valid job info: %d\n", withoutJobInfoCount)
-	fmt.Printf("Minions not yet ended: %d\n", notEnded)
-
-	if notEnded > 0 {
-		err = fmt.Errorf("unable to generate report. %d minions have not clearly eneded", notEnded)
-		return
-	}
-	if withoutJobInfoCount != 0 {
-		err = fmt.Errorf("some minions do not have a valid job info")
+	if res.GetJobInfo() == nil {
+		err = fmt.Errorf("no current job. unable to generate report")
 		return
 	}
 
-	startTime = time.UnixMilli(math.MaxInt64)
-	endTime = time.UnixMilli(0)
-	for _, ji := range res.GetMinionJobInfos() {
-		if ji.GetJobInfo() == nil {
-			continue
-		}
-
-		st := time.UnixMilli(ji.GetJobInfo().GetRunTime())
-		et := time.UnixMilli(ji.GetJobInfo().GetEndTime())
-
-		if st.Before(startTime) {
-			startTime = st
-		}
-		if et.After(endTime) {
-			endTime = et
-		}
+	switch res.GetJobInfo().GetJobState() {
+	case proto.JobState_NEW, proto.JobState_PREPARED, proto.JobState_RUNNING:
+		err = fmt.Errorf("unable to generate report. job has not yet ended")
+		return
+	case proto.JobState_ENDED_FAILURE:
+		fmt.Printf("Warning: job ended with failure")
+	case proto.JobState_ENDED_ABORTED:
+		fmt.Printf("Warning: job was aborted")
 	}
+
 	// Capture metrics from 2 mins before and after with 1min rounding
-	startTime = startTime.Add(-2 * time.Minute)
-	startTime = startTime.Round(1 * time.Minute)
-	endTime = endTime.Add(2 * time.Minute)
-	endTime = endTime.Round(1 * time.Minute)
+	startTime = time.UnixMilli(res.GetJobInfo().GetRunTime()).Add(-2 * time.Minute).Round(1 * time.Minute)
+	endTime = time.UnixMilli(res.GetJobInfo().GetEndTime()).Add(2 * time.Minute).Round(1 * time.Minute)
+
 	if startTime.After(endTime) {
 		err = fmt.Errorf("calculated startTime %s is before end time %s", startTime.Format(time.UnixDate), endTime.Format(time.UnixDate))
 		return

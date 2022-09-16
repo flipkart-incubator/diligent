@@ -117,7 +117,7 @@ func (s *MinionServer) Ping(_ context.Context, in *proto.MinionPingRequest) (*pr
 	defer s.mut.Unlock()
 
 	log.Infof("GRPC: Ping completed successfully")
-	var protoJobInfo *proto.JobInfo = nil
+	var protoJobInfo *proto.MinionJobInfo = nil
 	currentJob := s.job
 	if currentJob != nil {
 		protoJobInfo = currentJob.Info().ToProto()
@@ -260,7 +260,7 @@ func (s *MinionServer) QueryJob(ctx context.Context, in *proto.MinionQueryJobReq
 	defer s.mut.Unlock()
 
 	log.Infof("GRPC: QueryJob() completed successfully")
-	var protoJobInfo *proto.JobInfo = nil
+	var protoJobInfo *proto.MinionJobInfo = nil
 	currentJob := s.job
 	if currentJob != nil {
 		protoJobInfo = currentJob.Info().ToProto()
