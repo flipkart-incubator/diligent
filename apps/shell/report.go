@@ -23,30 +23,32 @@ func init() {
 	reportCmd := &grumble.Command{
 		Name:    "report",
 		Help:    "work with reports",
-		Aliases: []string{"bs"},
+		Aliases: []string{"re"},
 	}
 	grumbleApp.AddCommand(reportCmd)
 
 	reportSaveCmd := &grumble.Command{
-		Name: "save",
-		Help: "save the report for a job",
-		Run:  reportSave,
+		Name: "job",
+		Help: "generate a report for the current job",
+		Run:  reportJob,
 	}
 	reportCmd.AddCommand(reportSaveCmd)
 }
 
-func reportSave(c *grumble.Context) error {
+func reportJob(c *grumble.Context) error {
 	promAddr := c.Flags.String("prom")
 
-	c.App.Printf("Getting timespan for current job...\n")
-	startTime, endTime, stepSize, err := getTimes(c)
+	c.App.Printf("Getting regarding current job...\n")
+	jobName, startTime, endTime, stepSize, err := getJobParams(c)
 	if err != nil {
 		return err
 	}
+	c.App.Printf("job-name: %s\n", jobName)
 	c.App.Printf("start-time: %s\n", startTime.Format(time.UnixDate))
 	c.App.Printf("end-time: %s\n", endTime.Format(time.UnixDate))
 	c.App.Printf("step-duration: %s\n", stepSize.String())
 
+	c.App.Printf("Getting data for panels and creating charts...\n")
 	chs := make([]components.Charter, 0)
 	for _, p := range panels {
 		ch := newLineChart(p, startTime, endTime)
@@ -63,9 +65,10 @@ func reportSave(c *grumble.Context) error {
 		chs = append(chs, ch)
 	}
 
+	c.App.Printf("Generating and saving report...\n")
 	page := components.NewPage()
 	page.AddCharts(chs...)
-	fileName := fmt.Sprintf("report.html")
+	fileName := fmt.Sprintf("%s-job-report.html", jobName)
 	f, err := os.Create(fileName)
 	if err != nil {
 		return err
@@ -78,7 +81,7 @@ func reportSave(c *grumble.Context) error {
 	return nil
 }
 
-func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.Duration, err error) {
+func getJobParams(c *grumble.Context) (jobName string, startTime, endTime time.Time, stepSize time.Duration, err error) {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -96,6 +99,8 @@ func getTimes(c *grumble.Context) (startTime, endTime time.Time, stepSize time.D
 		err = fmt.Errorf("no current job. unable to generate report")
 		return
 	}
+
+	jobName = res.GetJobInfo().GetJobSpec().GetJobName()
 
 	switch res.GetJobInfo().GetJobState() {
 	case proto.JobState_NEW, proto.JobState_PREPARED, proto.JobState_RUNNING:
