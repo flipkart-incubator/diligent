@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"sync"
 )
@@ -10,6 +11,7 @@ import (
 // It is thread safe
 type MinionRegistry struct {
 	mut      sync.Mutex // Must be taken for all operations on the MinionRegistry
+	isLocked bool
 	registry map[string]*MinionProxy
 }
 
@@ -23,6 +25,10 @@ func (r *MinionRegistry) RegisterMinion(addr string) error {
 	log.Infof("RegisterMinion(%s)", addr)
 	r.mut.Lock()
 	defer r.mut.Unlock()
+
+	if r.isLocked {
+		return fmt.Errorf("cannot register minion. registry is locked")
+	}
 
 	// Close any existing proxy for the same minion and delete the entry
 	p := r.registry[addr]
@@ -45,6 +51,10 @@ func (r *MinionRegistry) UnregisterMinion(addr string) error {
 	log.Infof("UnregisterMinion(%s)", addr)
 	r.mut.Lock()
 	defer r.mut.Unlock()
+
+	if r.isLocked {
+		return fmt.Errorf("cannot unregister minion. registry is locked")
+	}
 
 	p := r.registry[addr]
 	if p != nil {
@@ -73,32 +83,16 @@ func (r *MinionRegistry) GetNumMinions() int {
 	return len(r.registry)
 }
 
-//func (r *MinionRegistry) GetMinionAddrs() []string {
-//	log.Infof("GetMinionAddrs")
-//	r.mut.Lock()
-//	defer r.mut.Unlock()
-//
-//	addrs := make([]string, len(r.registry))
-//
-//	i := 0
-//	for addr := range r.registry {
-//		addrs[i] = addr
-//		i++
-//	}
-//	return addrs
-//}
-//
-//func (r *MinionRegistry) GetMinionManagers() []*MinionProxy {
-//	log.Infof("GetMinionManagers")
-//	r.mut.Lock()
-//	defer r.mut.Unlock()
-//
-//	mms := make([]*MinionProxy, len(r.registry))
-//
-//	i := 0
-//	for _, p := range r.registry {
-//		mms[i] = p
-//		i++
-//	}
-//	return mms
-//}
+func (r *MinionRegistry) Lock() {
+	log.Infof("Lock")
+	r.mut.Lock()
+	defer r.mut.Unlock()
+	r.isLocked = true
+}
+
+func (r *MinionRegistry) Unlock() {
+	log.Infof("Lock")
+	r.mut.Lock()
+	defer r.mut.Unlock()
+	r.isLocked = false
+}

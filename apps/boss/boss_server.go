@@ -303,10 +303,8 @@ func (s *BossServer) StartExperiment(ctx context.Context, in *proto.BossStartExp
 		}
 	}
 
-	// TODO: Lock registry
 	exp := NewExperiment(in.GetExperimentName())
 	err := exp.Start()
-
 	if err != nil {
 		return &proto.BossStartExperimentResponse{
 			Status: &proto.GeneralStatus{
@@ -317,6 +315,7 @@ func (s *BossServer) StartExperiment(ctx context.Context, in *proto.BossStartExp
 	}
 
 	s.experiment = exp
+	s.registry.Lock()
 	return &proto.BossStartExperimentResponse{
 		Status: &proto.GeneralStatus{
 			IsOk: true,
@@ -348,7 +347,7 @@ func (s *BossServer) StopExperiment(ctx context.Context, in *proto.BossStopExper
 		}, nil
 	}
 
-	// TODO: Unlock registry
+	s.registry.Unlock()
 	return &proto.BossStopExperimentResponse{
 		Status: &proto.GeneralStatus{
 			IsOk: true,
