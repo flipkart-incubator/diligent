@@ -63,7 +63,7 @@ func init() {
 		Name: "await-completion",
 		Help: "wait for a job to complete",
 		Flags: func(f *grumble.Flags) {
-			f.Duration("t", "timeout", 10*time.Second, "wait timeout")
+			f.Duration("t", "timeout", 1*time.Hour, "wait timeout")
 		},
 		Run: jobAwaitCompletion,
 	}
