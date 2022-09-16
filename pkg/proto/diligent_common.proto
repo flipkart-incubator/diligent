@@ -89,7 +89,7 @@ message ProcessInfo {
 }
 
 enum JobState {
-  UNDEFINED = 0;
+  UNDEFINED_JOB_STATE = 0;
   NEW = 1;
   PREPARED = 2;
   RUNNING = 3;

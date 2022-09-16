@@ -22,8 +22,9 @@ type BossServer struct {
 	pid        string
 	startTime  time.Time
 
-	registry *MinionRegistry
-	job      *Job
+	registry   *MinionRegistry
+	job        *Job
+	experiment *Experiment
 }
 
 func NewBossServer(listenAddr string) *BossServer {
@@ -282,5 +283,98 @@ func (s *BossServer) GetJobInfo(ctx context.Context, in *proto.BossGetJobInfoReq
 			IsOk: true,
 		},
 		JobInfo: s.job.Info().ToProto(),
+	}, nil
+}
+
+func (s *BossServer) StartExperiment(ctx context.Context, in *proto.BossStartExperimentRequest) (*proto.BossStartExperimentResponse, error) {
+	log.Infof("GRPC: StartExperiment()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	if s.experiment != nil {
+		log.Infof("StartExperiment(): current experiment=%s, state=%s", s.experiment.Name(), s.experiment.State())
+		if !s.experiment.HasEnded() {
+			return &proto.BossStartExperimentResponse{
+				Status: &proto.GeneralStatus{
+					IsOk:          false,
+					FailureReason: "current experiment has not ended",
+				},
+			}, nil
+		}
+	}
+
+	// TODO: Lock registry
+	exp := NewExperiment(in.GetExperimentName())
+	err := exp.Start()
+
+	if err != nil {
+		return &proto.BossStartExperimentResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}, nil
+	}
+
+	s.experiment = exp
+	return &proto.BossStartExperimentResponse{
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+	}, nil
+}
+
+func (s *BossServer) StopExperiment(ctx context.Context, in *proto.BossStopExperimentRequest) (*proto.BossStopExperimentResponse, error) {
+	log.Infof("GRPC: StopExperiment()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	if s.experiment == nil {
+		return &proto.BossStopExperimentResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: "no current experiment",
+			},
+		}, nil
+	}
+
+	err := s.experiment.Stop()
+	if err != nil {
+		return &proto.BossStopExperimentResponse{
+			Status: &proto.GeneralStatus{
+				IsOk:          false,
+				FailureReason: err.Error(),
+			},
+		}, nil
+	}
+
+	// TODO: Unlock registry
+	return &proto.BossStopExperimentResponse{
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+	}, nil
+}
+
+func (s *BossServer) GetExperimentInfo(ctx context.Context, in *proto.BossGetExperimentInfoRequest) (*proto.BossGetExperimentInfoResponse, error) {
+	log.Infof("GRPC: GetExperimentInfo()")
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	if s.experiment == nil {
+		return &proto.BossGetExperimentInfoResponse{
+			Status: &proto.GeneralStatus{
+				IsOk: true,
+			},
+			ExperimentInfo: nil,
+		}, nil
+	}
+
+	log.Infof("GetExperimentInfo(): completed")
+	return &proto.BossGetExperimentInfoResponse{
+		Status: &proto.GeneralStatus{
+			IsOk: true,
+		},
+		ExperimentInfo: s.experiment.ToProto(),
 	}, nil
 }

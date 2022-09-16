@@ -33,6 +33,10 @@ type BossClient interface {
 	RunJob(ctx context.Context, in *BossRunJobRequest, opts ...grpc.CallOption) (*BossRunJobResponse, error)
 	AbortJob(ctx context.Context, in *BossAbortJobRequest, opts ...grpc.CallOption) (*BossAbortJobResponse, error)
 	GetJobInfo(ctx context.Context, in *BossGetJobInfoRequest, opts ...grpc.CallOption) (*BossGetJobInfoResponse, error)
+	// Experiment Management
+	StartExperiment(ctx context.Context, in *BossStartExperimentRequest, opts ...grpc.CallOption) (*BossStartExperimentResponse, error)
+	StopExperiment(ctx context.Context, in *BossStopExperimentRequest, opts ...grpc.CallOption) (*BossStopExperimentResponse, error)
+	GetExperimentInfo(ctx context.Context, in *BossGetExperimentInfoRequest, opts ...grpc.CallOption) (*BossGetExperimentInfoResponse, error)
 }
 
 type bossClient struct {
@@ -115,6 +119,33 @@ func (c *bossClient) GetJobInfo(ctx context.Context, in *BossGetJobInfoRequest, 
 	return out, nil
 }
 
+func (c *bossClient) StartExperiment(ctx context.Context, in *BossStartExperimentRequest, opts ...grpc.CallOption) (*BossStartExperimentResponse, error) {
+	out := new(BossStartExperimentResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/StartExperiment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bossClient) StopExperiment(ctx context.Context, in *BossStopExperimentRequest, opts ...grpc.CallOption) (*BossStopExperimentResponse, error) {
+	out := new(BossStopExperimentResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/StopExperiment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bossClient) GetExperimentInfo(ctx context.Context, in *BossGetExperimentInfoRequest, opts ...grpc.CallOption) (*BossGetExperimentInfoResponse, error) {
+	out := new(BossGetExperimentInfoResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/GetExperimentInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BossServer is the server API for Boss service.
 // All implementations must embed UnimplementedBossServer
 // for forward compatibility
@@ -130,6 +161,10 @@ type BossServer interface {
 	RunJob(context.Context, *BossRunJobRequest) (*BossRunJobResponse, error)
 	AbortJob(context.Context, *BossAbortJobRequest) (*BossAbortJobResponse, error)
 	GetJobInfo(context.Context, *BossGetJobInfoRequest) (*BossGetJobInfoResponse, error)
+	// Experiment Management
+	StartExperiment(context.Context, *BossStartExperimentRequest) (*BossStartExperimentResponse, error)
+	StopExperiment(context.Context, *BossStopExperimentRequest) (*BossStopExperimentResponse, error)
+	GetExperimentInfo(context.Context, *BossGetExperimentInfoRequest) (*BossGetExperimentInfoResponse, error)
 	mustEmbedUnimplementedBossServer()
 }
 
@@ -160,6 +195,15 @@ func (UnimplementedBossServer) AbortJob(context.Context, *BossAbortJobRequest) (
 }
 func (UnimplementedBossServer) GetJobInfo(context.Context, *BossGetJobInfoRequest) (*BossGetJobInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetJobInfo not implemented")
+}
+func (UnimplementedBossServer) StartExperiment(context.Context, *BossStartExperimentRequest) (*BossStartExperimentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartExperiment not implemented")
+}
+func (UnimplementedBossServer) StopExperiment(context.Context, *BossStopExperimentRequest) (*BossStopExperimentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopExperiment not implemented")
+}
+func (UnimplementedBossServer) GetExperimentInfo(context.Context, *BossGetExperimentInfoRequest) (*BossGetExperimentInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExperimentInfo not implemented")
 }
 func (UnimplementedBossServer) mustEmbedUnimplementedBossServer() {}
 
@@ -318,6 +362,60 @@ func _Boss_GetJobInfo_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Boss_StartExperiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossStartExperimentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).StartExperiment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/StartExperiment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).StartExperiment(ctx, req.(*BossStartExperimentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Boss_StopExperiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossStopExperimentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).StopExperiment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/StopExperiment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).StopExperiment(ctx, req.(*BossStopExperimentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Boss_GetExperimentInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossGetExperimentInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BossServer).GetExperimentInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Boss/GetExperimentInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BossServer).GetExperimentInfo(ctx, req.(*BossGetExperimentInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Boss_ServiceDesc is the grpc.ServiceDesc for Boss service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -356,6 +454,18 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetJobInfo",
 			Handler:    _Boss_GetJobInfo_Handler,
+		},
+		{
+			MethodName: "StartExperiment",
+			Handler:    _Boss_StartExperiment_Handler,
+		},
+		{
+			MethodName: "StopExperiment",
+			Handler:    _Boss_StopExperiment_Handler,
+		},
+		{
+			MethodName: "GetExperimentInfo",
+			Handler:    _Boss_GetExperimentInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
