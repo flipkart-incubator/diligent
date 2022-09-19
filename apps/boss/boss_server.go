@@ -286,15 +286,15 @@ func (s *BossServer) GetJobInfo(ctx context.Context, in *proto.BossGetJobInfoReq
 	}, nil
 }
 
-func (s *BossServer) StartExperiment(ctx context.Context, in *proto.BossStartExperimentRequest) (*proto.BossStartExperimentResponse, error) {
-	log.Infof("GRPC: StartExperiment()")
+func (s *BossServer) BeginExperiment(ctx context.Context, in *proto.BossBeginExperimentRequest) (*proto.BossBeginExperimentResponse, error) {
+	log.Infof("GRPC: BeginExperiment()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	if s.experiment != nil {
-		log.Infof("StartExperiment(): current experiment=%s, state=%s", s.experiment.Name(), s.experiment.State())
+		log.Infof("BeginExperiment(): current experiment=%s, state=%s", s.experiment.Name(), s.experiment.State())
 		if !s.experiment.HasEnded() {
-			return &proto.BossStartExperimentResponse{
+			return &proto.BossBeginExperimentResponse{
 				Status: &proto.GeneralStatus{
 					IsOk:          false,
 					FailureReason: "current experiment has not ended",
@@ -306,7 +306,7 @@ func (s *BossServer) StartExperiment(ctx context.Context, in *proto.BossStartExp
 	exp := NewExperiment(in.GetExperimentName())
 	err := exp.Start()
 	if err != nil {
-		return &proto.BossStartExperimentResponse{
+		return &proto.BossBeginExperimentResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: err.Error(),
@@ -316,20 +316,20 @@ func (s *BossServer) StartExperiment(ctx context.Context, in *proto.BossStartExp
 
 	s.experiment = exp
 	s.registry.Lock()
-	return &proto.BossStartExperimentResponse{
+	return &proto.BossBeginExperimentResponse{
 		Status: &proto.GeneralStatus{
 			IsOk: true,
 		},
 	}, nil
 }
 
-func (s *BossServer) StopExperiment(ctx context.Context, in *proto.BossStopExperimentRequest) (*proto.BossStopExperimentResponse, error) {
-	log.Infof("GRPC: StopExperiment()")
+func (s *BossServer) EndExperiment(ctx context.Context, in *proto.BossEndExperimentRequest) (*proto.BossEndExperimentResponse, error) {
+	log.Infof("GRPC: EndExperiment()")
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
 	if s.experiment == nil {
-		return &proto.BossStopExperimentResponse{
+		return &proto.BossEndExperimentResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: "no current experiment",
@@ -339,7 +339,7 @@ func (s *BossServer) StopExperiment(ctx context.Context, in *proto.BossStopExper
 
 	err := s.experiment.Stop()
 	if err != nil {
-		return &proto.BossStopExperimentResponse{
+		return &proto.BossEndExperimentResponse{
 			Status: &proto.GeneralStatus{
 				IsOk:          false,
 				FailureReason: err.Error(),
@@ -348,7 +348,7 @@ func (s *BossServer) StopExperiment(ctx context.Context, in *proto.BossStopExper
 	}
 
 	s.registry.Unlock()
-	return &proto.BossStopExperimentResponse{
+	return &proto.BossEndExperimentResponse{
 		Status: &proto.GeneralStatus{
 			IsOk: true,
 		},

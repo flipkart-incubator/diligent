@@ -44,7 +44,7 @@ setup:
         - minion await-count {{.Env.minionCount}}
 
 experiment:
-    - experiment start {{.Name}}
+    - experiment begin {{.Name}}
     - job prepare --name j-insert --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --batch-size {{.Params.batchSize}} insert-txn baseline
     - job run
     - job await-completion --cooldown {{.Params.coolDownDuration}}
@@ -57,7 +57,7 @@ experiment:
     - job prepare --name j-delete --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --batch-size {{.Params.batchSize}} delete-txn baseline
     - job run
     - job await-completion --cooldown {{.Params.coolDownDuration}}
-    - experiment stop
+    - experiment end
 
 conclusion:
     - report experiment

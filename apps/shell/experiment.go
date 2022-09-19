@@ -16,22 +16,22 @@ func init() {
 	}
 	grumbleApp.AddCommand(expCmd)
 
-	expStartCmd := &grumble.Command{
-		Name: "start",
-		Help: "start an experiment",
+	expBeginCmd := &grumble.Command{
+		Name: "begin",
+		Help: "begin an experiment",
 		Args: func(a *grumble.Args) {
 			a.String("name", "name of the experiment")
 		},
-		Run: expStart,
+		Run: expBegin,
 	}
-	expCmd.AddCommand(expStartCmd)
+	expCmd.AddCommand(expBeginCmd)
 
-	expStopCmd := &grumble.Command{
-		Name: "stop",
-		Help: "stop the current experiment",
-		Run:  expStop,
+	expEndCmd := &grumble.Command{
+		Name: "end",
+		Help: "end the current experiment",
+		Run:  expEnd,
 	}
-	expCmd.AddCommand(expStopCmd)
+	expCmd.AddCommand(expEndCmd)
 
 	expInfoCmd := &grumble.Command{
 		Name: "info",
@@ -55,7 +55,7 @@ func init() {
 	expCmd.AddCommand(expRunScript)
 }
 
-func expStart(c *grumble.Context) error {
+func expBegin(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 
 	// Experiment name param
@@ -71,7 +71,7 @@ func expStart(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.StartExperiment(grpcCtx, &proto.BossStartExperimentRequest{ExperimentName: experimentName})
+	res, err := bossClient.BeginExperiment(grpcCtx, &proto.BossBeginExperimentRequest{ExperimentName: experimentName})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 
@@ -87,7 +87,7 @@ func expStart(c *grumble.Context) error {
 	return nil
 }
 
-func expStop(c *grumble.Context) error {
+func expEnd(c *grumble.Context) error {
 	bossAddr := c.Flags.String("boss")
 	bossClient, err := getBossClient(bossAddr)
 	if err != nil {
@@ -96,7 +96,7 @@ func expStop(c *grumble.Context) error {
 
 	grpcCtx, grpcCancel := context.WithTimeout(context.Background(), bossRequestTimeoutSecs*time.Second)
 	reqStart := time.Now()
-	res, err := bossClient.StopExperiment(grpcCtx, &proto.BossStopExperimentRequest{})
+	res, err := bossClient.EndExperiment(grpcCtx, &proto.BossEndExperimentRequest{})
 	reqDuration := time.Since(reqStart)
 	grpcCancel()
 

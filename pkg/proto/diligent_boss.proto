@@ -21,8 +21,8 @@ service Boss {
   rpc GetJobInfo (BossGetJobInfoRequest) returns (BossGetJobInfoResponse);
 
   // Experiment Management
-  rpc StartExperiment (BossStartExperimentRequest) returns (BossStartExperimentResponse);
-  rpc StopExperiment (BossStopExperimentRequest) returns (BossStopExperimentResponse);
+  rpc BeginExperiment (BossBeginExperimentRequest) returns (BossBeginExperimentResponse);
+  rpc EndExperiment (BossEndExperimentRequest) returns (BossEndExperimentResponse);
   rpc GetExperimentInfo (BossGetExperimentInfoRequest) returns (BossGetExperimentInfoResponse);
 }
 
@@ -126,18 +126,18 @@ message ExperimentInfo {
   int64 stop_time = 4;
 }
 
-message BossStartExperimentRequest {
+message BossBeginExperimentRequest {
   string experiment_name = 1;
 }
 
-message BossStartExperimentResponse {
+message BossBeginExperimentResponse {
   GeneralStatus status = 1;
 }
 
-message BossStopExperimentRequest {
+message BossEndExperimentRequest {
 }
 
-message BossStopExperimentResponse {
+message BossEndExperimentResponse {
   GeneralStatus status = 1;
 }
 

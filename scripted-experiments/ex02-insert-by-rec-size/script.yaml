@@ -80,7 +80,7 @@ setup:
         - minion await-count {{env.minionCount}}
 
 experiment:
-    - experiment start {{.Name}}
+    - experiment begin {{.Name}}
     - job prepare --dataspec-file 1k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1k
     - job run
     - job await-completion --cooldown {{.Params.coolDownDuration}}
@@ -93,7 +93,7 @@ experiment:
     - job prepare --dataspec-file 1000k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1000k
     - job run
     - job await-completion --cooldown {{.Params.coolDownDuration}}
-    - experiment stop
+    - experiment end
 
 conclusion:
     - report experiment

@@ -34,8 +34,8 @@ type BossClient interface {
 	AbortJob(ctx context.Context, in *BossAbortJobRequest, opts ...grpc.CallOption) (*BossAbortJobResponse, error)
 	GetJobInfo(ctx context.Context, in *BossGetJobInfoRequest, opts ...grpc.CallOption) (*BossGetJobInfoResponse, error)
 	// Experiment Management
-	StartExperiment(ctx context.Context, in *BossStartExperimentRequest, opts ...grpc.CallOption) (*BossStartExperimentResponse, error)
-	StopExperiment(ctx context.Context, in *BossStopExperimentRequest, opts ...grpc.CallOption) (*BossStopExperimentResponse, error)
+	BeginExperiment(ctx context.Context, in *BossBeginExperimentRequest, opts ...grpc.CallOption) (*BossBeginExperimentResponse, error)
+	EndExperiment(ctx context.Context, in *BossEndExperimentRequest, opts ...grpc.CallOption) (*BossEndExperimentResponse, error)
 	GetExperimentInfo(ctx context.Context, in *BossGetExperimentInfoRequest, opts ...grpc.CallOption) (*BossGetExperimentInfoResponse, error)
 }
 
@@ -119,18 +119,18 @@ func (c *bossClient) GetJobInfo(ctx context.Context, in *BossGetJobInfoRequest, 
 	return out, nil
 }
 
-func (c *bossClient) StartExperiment(ctx context.Context, in *BossStartExperimentRequest, opts ...grpc.CallOption) (*BossStartExperimentResponse, error) {
-	out := new(BossStartExperimentResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/StartExperiment", in, out, opts...)
+func (c *bossClient) BeginExperiment(ctx context.Context, in *BossBeginExperimentRequest, opts ...grpc.CallOption) (*BossBeginExperimentResponse, error) {
+	out := new(BossBeginExperimentResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/BeginExperiment", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *bossClient) StopExperiment(ctx context.Context, in *BossStopExperimentRequest, opts ...grpc.CallOption) (*BossStopExperimentResponse, error) {
-	out := new(BossStopExperimentResponse)
-	err := c.cc.Invoke(ctx, "/proto.Boss/StopExperiment", in, out, opts...)
+func (c *bossClient) EndExperiment(ctx context.Context, in *BossEndExperimentRequest, opts ...grpc.CallOption) (*BossEndExperimentResponse, error) {
+	out := new(BossEndExperimentResponse)
+	err := c.cc.Invoke(ctx, "/proto.Boss/EndExperiment", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +162,8 @@ type BossServer interface {
 	AbortJob(context.Context, *BossAbortJobRequest) (*BossAbortJobResponse, error)
 	GetJobInfo(context.Context, *BossGetJobInfoRequest) (*BossGetJobInfoResponse, error)
 	// Experiment Management
-	StartExperiment(context.Context, *BossStartExperimentRequest) (*BossStartExperimentResponse, error)
-	StopExperiment(context.Context, *BossStopExperimentRequest) (*BossStopExperimentResponse, error)
+	BeginExperiment(context.Context, *BossBeginExperimentRequest) (*BossBeginExperimentResponse, error)
+	EndExperiment(context.Context, *BossEndExperimentRequest) (*BossEndExperimentResponse, error)
 	GetExperimentInfo(context.Context, *BossGetExperimentInfoRequest) (*BossGetExperimentInfoResponse, error)
 	mustEmbedUnimplementedBossServer()
 }
@@ -196,11 +196,11 @@ func (UnimplementedBossServer) AbortJob(context.Context, *BossAbortJobRequest) (
 func (UnimplementedBossServer) GetJobInfo(context.Context, *BossGetJobInfoRequest) (*BossGetJobInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetJobInfo not implemented")
 }
-func (UnimplementedBossServer) StartExperiment(context.Context, *BossStartExperimentRequest) (*BossStartExperimentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartExperiment not implemented")
+func (UnimplementedBossServer) BeginExperiment(context.Context, *BossBeginExperimentRequest) (*BossBeginExperimentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BeginExperiment not implemented")
 }
-func (UnimplementedBossServer) StopExperiment(context.Context, *BossStopExperimentRequest) (*BossStopExperimentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopExperiment not implemented")
+func (UnimplementedBossServer) EndExperiment(context.Context, *BossEndExperimentRequest) (*BossEndExperimentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EndExperiment not implemented")
 }
 func (UnimplementedBossServer) GetExperimentInfo(context.Context, *BossGetExperimentInfoRequest) (*BossGetExperimentInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetExperimentInfo not implemented")
@@ -362,38 +362,38 @@ func _Boss_GetJobInfo_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_StartExperiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BossStartExperimentRequest)
+func _Boss_BeginExperiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossBeginExperimentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).StartExperiment(ctx, in)
+		return srv.(BossServer).BeginExperiment(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/StartExperiment",
+		FullMethod: "/proto.Boss/BeginExperiment",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).StartExperiment(ctx, req.(*BossStartExperimentRequest))
+		return srv.(BossServer).BeginExperiment(ctx, req.(*BossBeginExperimentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Boss_StopExperiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BossStopExperimentRequest)
+func _Boss_EndExperiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BossEndExperimentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BossServer).StopExperiment(ctx, in)
+		return srv.(BossServer).EndExperiment(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Boss/StopExperiment",
+		FullMethod: "/proto.Boss/EndExperiment",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BossServer).StopExperiment(ctx, req.(*BossStopExperimentRequest))
+		return srv.(BossServer).EndExperiment(ctx, req.(*BossEndExperimentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -456,12 +456,12 @@ var Boss_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Boss_GetJobInfo_Handler,
 		},
 		{
-			MethodName: "StartExperiment",
-			Handler:    _Boss_StartExperiment_Handler,
+			MethodName: "BeginExperiment",
+			Handler:    _Boss_BeginExperiment_Handler,
 		},
 		{
-			MethodName: "StopExperiment",
-			Handler:    _Boss_StopExperiment_Handler,
+			MethodName: "EndExperiment",
+			Handler:    _Boss_EndExperiment_Handler,
 		},
 		{
 			MethodName: "GetExperimentInfo",
