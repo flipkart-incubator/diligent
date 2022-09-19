@@ -1,5 +1,6 @@
+name: insert-by-rec-size
+
 info:
-    name: basic-dml
     version: 0.0.0
     question: How is insert performance affect by record size?
     description: |
@@ -72,18 +73,27 @@ setup:
         );
 
     diligent:
-        - dataspec create --num-recs 10000000 --rec-size 1000 1k.data
-        - dataspec create --num-recs 1000000 --rec-size 10000 10k.data
-        - dataspec create --num-recs 100000 --rec-size 100000 100k.data
-        - dataspec create --num-recs 10000 --rec-size 1000000 1000k.data
+        - dataspec create --skip-if-exists --num-recs 10000000 --rec-size 1000 1k.data
+        - dataspec create --skip-if-exists --num-recs 1000000 --rec-size 10000 10k.data
+        - dataspec create --skip-if-exists --num-recs 100000 --rec-size 100000 100k.data
+        - dataspec create --skip-if-exists --num-recs 10000 --rec-size 1000000 1000k.data
         - minion await-count {{env.minionCount}}
 
 experiment:
-    - job run --dataspec-file 1k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1k
-    - job run --dataspec-file 10k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t10k
-    - job run --dataspec-file 100k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t100k
-    - job run --dataspec-file 1000k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1000k
+    - experiment start {{.Name}}
+    - job prepare --dataspec-file 1k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1k
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --dataspec-file 10k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t10k
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --dataspec-file 100k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t100k
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --dataspec-file 1000k.data --db-driver {{env.dbDriver}} --db-url {{env.dbUrl}} insert t1000k
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - experiment stop
 
-epilogue:
-    - experiment save-details --name {{info.name}}
-    - experiment save-metrics --name {{info.name}}
+conclusion:
+    - report experiment

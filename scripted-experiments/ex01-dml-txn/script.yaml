@@ -1,0 +1,63 @@
+name: dml-txn
+
+info:
+    version: 0.0.0
+    question: What are the transaction latencies and throughput for transactions with a few basic DML statements?
+    description: |
+        Runs four separate jobs that execute insert, select, update and delete dml commands in a transaction
+        Insert and delete run for all the records
+        Select and update run for a fixed duration
+
+env:
+    - dbDriver
+    - dbUrl
+    - minionCount
+
+params:
+    numRecs: 1000000
+    recSize: 1024
+    concurrency: 10
+    batchSize: 5
+    selectDuration: 30m
+    updateDuration: 30m
+    coolDownDuration: 3m
+
+setup:
+    sql:
+        - DROP TABLE IF EXISTS baseline;
+        - | 
+            CREATE TABLE baseline
+            (
+                pk        varchar(32)    NOT NULL,
+                uniq      varchar(32)    NOT NULL,
+                small_grp varchar(32)    NOT NULL,
+                large_grp varchar(32)    NOT NULL,
+                fixed_val varchar(32)    NOT NULL,
+                seq_num   int            NOT NULL,
+                ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                payload   varchar(10240) NOT NULL,
+                PRIMARY KEY (pk)
+            );
+
+    diligent:
+        - dataspec create --skip-if-exists --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
+        - minion await-count {{.Env.minionCount}}
+
+experiment:
+    - experiment start {{.Name}}
+    - job prepare --name j-insert --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --batch-size {{.Params.batchSize}} insert-txn baseline
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j-update --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --batch-size {{.Params.batchSize}} --duration {{.Params.updateDuration}} update-txn baseline
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j-select-pk --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --batch-size {{.Params.batchSize}} --duration {{.Params.selectDuration}} select-pk-txn baseline
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j-delete --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --batch-size {{.Params.batchSize}} delete-txn baseline
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - experiment stop
+
+conclusion:
+    - report experiment
