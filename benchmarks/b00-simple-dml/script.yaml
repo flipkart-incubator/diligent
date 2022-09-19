@@ -41,24 +41,24 @@ setup:
             );
 
     diligent:
-        - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} dataspec create --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
-        - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} minion await-count {{.Env.minionCount}}
+        - dataspec create --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
+        - minion await-count {{.Env.minionCount}}
 
 experiment:
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} experiment start {{.Name}}
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job prepare --name {{.Name}}-insert --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert baseline
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job run
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job await-completion
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job prepare --name {{.Name}}-update --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.updateDuration}} update baseline
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job run
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job await-completion
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job prepare --name {{.Name}}-select-pk --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.selectDuration}} select-pk baseline
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job run
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job await-completion
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job prepare --name {{.Name}}-delete --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} delete baseline
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job run
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} job await-completion
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} experiment stop
+    - experiment start {{.Name}}
+    - job prepare --name {{.Name}}-insert --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert baseline
+    - job run
+    - job await-completion
+    - job prepare --name {{.Name}}-update --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.updateDuration}} update baseline
+    - job run
+    - job await-completion
+    - job prepare --name {{.Name}}-select-pk --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.selectDuration}} select-pk baseline
+    - job run
+    - job await-completion
+    - job prepare --name {{.Name}}-delete --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} delete baseline
+    - job run
+    - job await-completion
+    - experiment stop
 
 conclusion:
-    - --boss {{.Env.bossAddr}} -p {{.Env.promAddr}} report experiment
+    - report experiment

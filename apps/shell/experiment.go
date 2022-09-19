@@ -39,6 +39,20 @@ func init() {
 		Run:  expInfo,
 	}
 	expCmd.AddCommand(expInfoCmd)
+
+	expRunScript := &grumble.Command{
+		Name: "run-script",
+		Help: "run a scripted experiment",
+		Flags: func(f *grumble.Flags) {
+			f.String("v", "values-file", "", "YAML file for values")
+			f.Bool("d", "dry-run", false, "Perform a dry run")
+		},
+		Args: func(a *grumble.Args) {
+			a.String("script-file", "Script File")
+		},
+		Run: expRunScript,
+	}
+	expCmd.AddCommand(expRunScript)
 }
 
 func expStart(c *grumble.Context) error {
@@ -128,6 +142,33 @@ func expInfo(c *grumble.Context) error {
 		c.App.Printf("state     : %s\n", res.GetExperimentInfo().GetState())
 		c.App.Printf("start-time: %s\n", time.UnixMilli(res.GetExperimentInfo().GetStartTime()).Format(time.UnixDate))
 		c.App.Printf("stop-time : %s\n", time.UnixMilli(res.GetExperimentInfo().GetStopTime()).Format(time.UnixDate))
+	}
+	return nil
+}
+
+func expRunScript(c *grumble.Context) error {
+	scriptFileName := c.Args.String("script-file")
+	valuesFileName := c.Flags.String("values-file")
+	dryRun := c.Flags.Bool("dry-run")
+
+	bms, err := LoadScript(scriptFileName)
+	if err != nil {
+		return err
+	}
+
+	bmv, err := LoadValues(valuesFileName)
+	if err != nil {
+		return err
+	}
+
+	executor, err := NewExecutor(bms, bmv, dryRun)
+	if err != nil {
+		return err
+	}
+
+	err = executor.Execute()
+	if err != nil {
+		return err
 	}
 	return nil
 }

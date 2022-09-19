@@ -7,7 +7,7 @@ import (
 )
 
 type BenchmarkValues struct {
-	Env map[string]string `yaml:"env"`
+	Env       map[string]string `yaml:"env"`
 	Overrides map[string]string `yaml:"overrides"`
 }
 

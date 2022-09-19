@@ -5,16 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"io"
-	"os/exec"
 	"strings"
 	"text/template"
 	"time"
 )
 
 const (
-	sqlTimeout  = 5 * time.Second
-	shellBinary = "shell"
+	sqlTimeout = 5 * time.Second
 )
 
 type Executor struct {
@@ -227,40 +224,11 @@ func (e *Executor) executeDiligentCmd(cmdTmplStr string) error {
 		return err
 	}
 	cmdStr := sb.String()
-	fmt.Println(">>", shellBinary, cmdStr)
+	fmt.Println(">>", cmdStr)
 
 	if !e.dryRun {
 		tokens := strings.Split(cmdStr, " ")
-		cmd := exec.Command(shellBinary, tokens...)
-
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-
-		err = cmd.Start()
-		if err != nil {
-			return err
-		}
-
-		outBytes, _ := io.ReadAll(stdout)
-		errBytes, _ := io.ReadAll(stderr)
-		outText := string(outBytes)
-		errText := string(errBytes)
-		fmt.Println(outText)
-		err = cmd.Wait()
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.ExitCode() != 0 {
-				fmt.Println(errText)
-				return fmt.Errorf("command failed with error code: %d", exitErr.ExitCode())
-			}
-		} else {
-			return err
-		}
+		return grumbleApp.RunCommand(tokens)
 	}
 
 	return nil
