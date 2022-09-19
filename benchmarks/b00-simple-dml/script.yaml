@@ -39,7 +39,7 @@ setup:
             );
 
     diligent:
-        - dataspec create --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
+        - dataspec create --skip-if-exists --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
         - minion await-count {{.Env.minionCount}}
 
 experiment:
