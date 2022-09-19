@@ -249,7 +249,7 @@ func newLineChart(panel Panel, startTime, endTime time.Time) *charts.Line {
 		charts.WithTooltipOpts(opts.Tooltip{
 			Show:      true,
 			Trigger:   "axis",
-			TriggerOn: "mouseclick",
+			TriggerOn: "mousemove|click",
 		}),
 	)
 	return lineChart
@@ -270,6 +270,7 @@ func plotData(chart *charts.Line, metrics model.Matrix, q Query) error {
 		for _, s := range series.Values {
 			t := float64(s.Timestamp) * xScale
 			v := float64(s.Value) * yScale
+			v = math.Round(v*100) / 100
 			if math.IsNaN(v) {
 				continue
 			}
