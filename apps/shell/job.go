@@ -63,7 +63,8 @@ func init() {
 		Name: "await-completion",
 		Help: "wait for a job to complete",
 		Flags: func(f *grumble.Flags) {
-			f.Duration("t", "timeout", 1*time.Hour, "wait timeout")
+			f.Duration("t", "timeout", 1*time.Hour, "Wait timeout")
+			f.Duration("c", "cooldown", 0*time.Second, "Wait for an additional cool down period after job ends")
 		},
 		Run: jobAwaitCompletion,
 	}
@@ -324,6 +325,7 @@ func jobAwaitCompletion(c *grumble.Context) error {
 	}
 
 	timeout := c.Flags.Duration("timeout")
+	cooldown := c.Flags.Duration("cooldown")
 
 	c.App.Printf("Waiting for current job to end. Wait timeout=%s\n", timeout.String())
 
@@ -342,12 +344,18 @@ func jobAwaitCompletion(c *grumble.Context) error {
 			c.App.Printf(".")
 		case proto.JobState_ENDED_SUCCESS:
 			c.App.Printf("\nJob has ended successfully\n")
+			c.App.Printf("Waiting for cooldown period %s\n", cooldown)
+			time.Sleep(cooldown)
 			return nil
 		case proto.JobState_ENDED_FAILURE:
 			c.App.Printf("\nJob has failed\n")
+			c.App.Printf("Waiting for cooldown period %s\n", cooldown)
+			time.Sleep(cooldown)
 			return nil
 		case proto.JobState_ENDED_ABORTED:
 			c.App.Printf("\nJob was aborted\n")
+			c.App.Printf("Waiting for cooldown period %s\n", cooldown)
+			time.Sleep(cooldown)
 			return nil
 		}
 		if ctx.Err() != nil {

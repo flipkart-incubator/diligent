@@ -44,18 +44,18 @@ setup:
 
 experiment:
     - experiment start {{.Name}}
-    - job prepare --name {{.Name}}-insert --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert baseline
+    - job prepare --name j-insert --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert baseline
     - job run
-    - job await-completion
-    - job prepare --name {{.Name}}-update --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.updateDuration}} update baseline
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j-update --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.updateDuration}} update baseline
     - job run
-    - job await-completion
-    - job prepare --name {{.Name}}-select-pk --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.selectDuration}} select-pk baseline
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j-select-pk --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.selectDuration}} select-pk baseline
     - job run
-    - job await-completion
-    - job prepare --name {{.Name}}-delete --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} delete baseline
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j-delete --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} delete baseline
     - job run
-    - job await-completion
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
     - experiment stop
 
 conclusion:

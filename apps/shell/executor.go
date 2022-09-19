@@ -15,12 +15,11 @@ const (
 )
 
 type Executor struct {
-	script           *ExperimentScript
-	values           *ExperimentValues
-	replacements     *Replacements
-	db               *sql.DB
-	dryRun           bool
-	coolDownDuration time.Duration
+	script       *ExperimentScript
+	values       *ExperimentValues
+	replacements *Replacements
+	db           *sql.DB
+	dryRun       bool
 }
 
 func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun bool) (*Executor, error) {
@@ -53,16 +52,6 @@ func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun bool
 		return nil, fmt.Errorf("required env not found: %s", "dbUrl")
 	}
 
-	// Get cooldown seconds
-	coolDownDurationStr := replacements.Params["coolDownDuration"]
-	if coolDownDurationStr == "" {
-		return nil, fmt.Errorf("required env not found: %s", "coolDownDuration")
-	}
-	coolDownDuration, err := time.ParseDuration(coolDownDurationStr)
-	if err != nil {
-		return nil, err
-	}
-
 	// Open new connection
 	db, err := sql.Open(dbDriver, dbUrl)
 	if err != nil {
@@ -70,12 +59,11 @@ func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun bool
 	}
 
 	return &Executor{
-		script:           script,
-		values:           values,
-		replacements:     replacements,
-		db:               db,
-		dryRun:           dryRun,
-		coolDownDuration: coolDownDuration,
+		script:       script,
+		values:       values,
+		replacements: replacements,
+		db:           db,
+		dryRun:       dryRun,
 	}, nil
 }
 
@@ -116,7 +104,6 @@ func (e *Executor) Execute() error {
 	fmt.Printf("\nStarting Execution Phase:\n")
 	fmt.Printf("Executing Diligent commands:\n")
 	for _, cmd := range e.script.Experiment {
-		e.executeCoolDown()
 		err := e.executeDiligentCmd(cmd)
 		if err != nil {
 			return err
@@ -181,12 +168,6 @@ func getParamValues(script *ExperimentScript, values *ExperimentValues) (map[str
 	}
 
 	return params, nil
-}
-
-func (e *Executor) executeCoolDown() {
-	fmt.Printf("Cooldown for %v seconds at %s..\n", e.coolDownDuration, time.Now().Format(time.Stamp))
-	time.Sleep(e.coolDownDuration)
-	fmt.Printf("Proceeding at %s..\n", time.Now().Format(time.Stamp))
 }
 
 func (e *Executor) executeSQLCmd(cmdTmplStr string) error {
