@@ -26,7 +26,7 @@ func init() {
 			f.String("s", "dataspec-file", "", "name of the dataspec file")
 			f.String("r", "db-driver", "", "db driver to use")
 			f.String("d", "db-url", "", "db connection url")
-			f.Int("t", "duration", 0, "duration after which workload is terminated (seconds). zero for no timout (default)")
+			f.Duration("t", "duration", 0, "duration after which workload is terminated (seconds). zero for no timout (default)")
 			f.Int("c", "concurrency", 1, "number of concurrent workers")
 			f.Int("k", "batch-size", 1, "number of statements in a transaction (for transaction based workloads)")
 		},
@@ -102,7 +102,8 @@ func jobPrepare(c *grumble.Context) error {
 		return fmt.Errorf("please specify the connection url")
 	}
 
-	durationSec := c.Flags.Int("duration")
+	duration := c.Flags.Duration("duration")
+	durationSec := int(duration.Seconds())
 	if durationSec < 0 {
 		return fmt.Errorf("invalid duration %d. Must be >= 0", durationSec)
 	}

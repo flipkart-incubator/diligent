@@ -1,12 +1,12 @@
 env:
   dbDriver: mysql
-  dbUrl: tester:password@tcp(35.244.60.130:8027)/diligent
+  dbUrl: tester:password@tcp(34.100.231.32:8027)/diligent
   minionCount: 2
   bossAddr: localhost:5710
-  promAddr: localhost:9090
+  promAddr: http://localhost:9090
 
 overrides:
   numRecs: 100000
-  selectDuration: 300s
-  updateDuration: 300s
-  coolDownDuration: 10s
+  selectDuration: 5m
+  updateDuration: 5m
+  coolDownDuration: 1m
