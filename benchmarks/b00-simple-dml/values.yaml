@@ -5,6 +5,6 @@ env:
 
 overrides:
   numRecs: 1000
-  selectDuration: 1m
-  updateDuration: 1m
+  selectDuration: 30s
+  updateDuration: 30s
   coolDownDuration: 1s
