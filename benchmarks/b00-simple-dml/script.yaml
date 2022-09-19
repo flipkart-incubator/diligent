@@ -12,8 +12,6 @@ env:
     - dbDriver
     - dbUrl
     - minionCount
-    - bossAddr
-    - promAddr
 
 params:
     numRecs: 1000000

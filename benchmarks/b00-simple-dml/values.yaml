@@ -2,8 +2,6 @@ env:
   dbDriver: mysql
   dbUrl: tester:password@tcp(34.93.193.79:8027)/diligent
   minionCount: 2
-  bossAddr: localhost:5710
-  promAddr: http://localhost:9090
 
 overrides:
   numRecs: 1000
