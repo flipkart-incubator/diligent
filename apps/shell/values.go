@@ -6,12 +6,12 @@ import (
 	"os"
 )
 
-type BenchmarkValues struct {
+type ExperimentValues struct {
 	Env       map[string]string `yaml:"env"`
 	Overrides map[string]string `yaml:"overrides"`
 }
 
-func LoadValues(valuesFileName string) (*BenchmarkValues, error) {
+func LoadValues(valuesFileName string) (*ExperimentValues, error) {
 	var err error
 
 	file, err := os.Open(valuesFileName)
@@ -23,11 +23,11 @@ func LoadValues(valuesFileName string) (*BenchmarkValues, error) {
 		return nil, err
 	}
 
-	bmv := &BenchmarkValues{}
-	err = yaml.Unmarshal(yamlBytes, &bmv)
+	values := &ExperimentValues{}
+	err = yaml.Unmarshal(yamlBytes, &values)
 	if err != nil {
 		return nil, err
 	}
 
-	return bmv, nil
+	return values, nil
 }

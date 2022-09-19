@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-type BenchmarkScript struct {
+type ExperimentScript struct {
 	Name string `yaml:"name"`
 	Info struct {
 		Version     string `yaml:"version"`
@@ -29,7 +29,7 @@ type Replacements struct {
 	Params map[string]string
 }
 
-func LoadScript(scriptFileName string) (*BenchmarkScript, error) {
+func LoadScript(scriptFileName string) (*ExperimentScript, error) {
 	var err error
 
 	file, err := os.Open(scriptFileName)
@@ -41,11 +41,11 @@ func LoadScript(scriptFileName string) (*BenchmarkScript, error) {
 		return nil, err
 	}
 
-	bms := &BenchmarkScript{}
-	err = yaml.Unmarshal(yamlBytes, &bms)
+	script := &ExperimentScript{}
+	err = yaml.Unmarshal(yamlBytes, &script)
 	if err != nil {
 		return nil, err
 	}
 
-	return bms, nil
+	return script, nil
 }

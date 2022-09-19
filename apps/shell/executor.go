@@ -15,15 +15,15 @@ const (
 )
 
 type Executor struct {
-	script           *BenchmarkScript
-	values           *BenchmarkValues
+	script           *ExperimentScript
+	values           *ExperimentValues
 	replacements     *Replacements
 	db               *sql.DB
 	dryRun           bool
 	coolDownDuration time.Duration
 }
 
-func NewExecutor(script *BenchmarkScript, values *BenchmarkValues, dryRun bool) (*Executor, error) {
+func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun bool) (*Executor, error) {
 	env, err := getEnvValues(script, values)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func (e *Executor) Execute() error {
 	return nil
 }
 
-func getEnvValues(script *BenchmarkScript, values *BenchmarkValues) (map[string]string, error) {
+func getEnvValues(script *ExperimentScript, values *ExperimentValues) (map[string]string, error) {
 	env := make(map[string]string)
 	notFound := make([]string, 0)
 
@@ -156,7 +156,7 @@ func getEnvValues(script *BenchmarkScript, values *BenchmarkValues) (map[string]
 	return env, nil
 }
 
-func getParamValues(script *BenchmarkScript, values *BenchmarkValues) (map[string]string, error) {
+func getParamValues(script *ExperimentScript, values *ExperimentValues) (map[string]string, error) {
 	params := make(map[string]string)
 	unknowns := make([]string, 0)
 

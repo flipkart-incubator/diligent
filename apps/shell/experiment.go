@@ -151,17 +151,17 @@ func expRunScript(c *grumble.Context) error {
 	valuesFileName := c.Flags.String("values-file")
 	dryRun := c.Flags.Bool("dry-run")
 
-	bms, err := LoadScript(scriptFileName)
+	script, err := LoadScript(scriptFileName)
 	if err != nil {
 		return err
 	}
 
-	bmv, err := LoadValues(valuesFileName)
+	values, err := LoadValues(valuesFileName)
 	if err != nil {
 		return err
 	}
 
-	executor, err := NewExecutor(bms, bmv, dryRun)
+	executor, err := NewExecutor(script, values, dryRun)
 	if err != nil {
 		return err
 	}
