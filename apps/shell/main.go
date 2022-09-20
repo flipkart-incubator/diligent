@@ -9,7 +9,7 @@ import (
 
 var grumbleApp = grumble.New(&grumble.Config{
 	Name:                  "diligent",
-	Description:           "Diligent: A SQL load runner",
+	Description:           "Diligent: Run performance experiments on your SQL DB",
 	HistoryFile:           "/tmp/diligent.hist",
 	Prompt:                "diligent » ",
 	PromptColor:           color.New(color.FgCyan, color.Bold),
