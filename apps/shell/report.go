@@ -53,7 +53,7 @@ func reportJob(c *grumble.Context) error {
 		return err
 	}
 	now := time.Now()
-	fileName := fmt.Sprintf("job-report-%s-%04d-%02d-%02dT%02d%02d%02d.html", jobName,
+	fileName := fmt.Sprintf("%s-job-report-%04d-%02d-%02dT%02d%02d%02d.html", jobName,
 		now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
 	err = saveReport(c, chs, fileName)
 
@@ -72,7 +72,7 @@ func reportExperiment(c *grumble.Context) error {
 	}
 
 	now := time.Now()
-	fileName := fmt.Sprintf("experiment-report-%s-%04d-%02d-%02dT%02d%02d%02d.html", expName,
+	fileName := fmt.Sprintf("%s-experiment-report-%04d-%02d-%02dT%02d%02d%02d.html", expName,
 		now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
 	err = saveReport(c, chs, fileName)
 
