@@ -15,14 +15,15 @@ const (
 )
 
 type Executor struct {
-	script       *ExperimentScript
-	values       *ExperimentValues
-	replacements *Replacements
-	db           *sql.DB
-	dryRun       bool
+	script          *ExperimentScript
+	values          *ExperimentValues
+	replacements    *Replacements
+	db              *sql.DB
+	dryRun          bool
+	continueOnError bool
 }
 
-func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun bool) (*Executor, error) {
+func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun, continueOnError bool) (*Executor, error) {
 	env, err := getEnvValues(script, values)
 	if err != nil {
 		return nil, err
@@ -59,17 +60,20 @@ func NewExecutor(script *ExperimentScript, values *ExperimentValues, dryRun bool
 	}
 
 	return &Executor{
-		script:       script,
-		values:       values,
-		replacements: replacements,
-		db:           db,
-		dryRun:       dryRun,
+		script:          script,
+		values:          values,
+		replacements:    replacements,
+		db:              db,
+		dryRun:          dryRun,
+		continueOnError: continueOnError,
 	}, nil
 }
 
 func (e *Executor) Execute() error {
+	errors := 0
 	fmt.Printf("Running benchmark: %s\n", e.script.Name)
 	fmt.Printf("Dry run: %v\n", e.dryRun)
+	fmt.Printf("Continue on error: %v\n", e.continueOnError)
 	fmt.Printf("General information:\n")
 	fmt.Printf("\tVersion: %s\n", e.script.Info.Version)
 	fmt.Printf("\tQuestion: %s\n", e.script.Info.Question)
@@ -106,7 +110,12 @@ func (e *Executor) Execute() error {
 	for _, cmd := range e.script.Experiment {
 		err := e.executeDiligentCmd(cmd)
 		if err != nil {
-			return err
+			if e.continueOnError {
+				fmt.Printf("WARNING: Continuing despite errors\n")
+				errors++
+			} else {
+				return err
+			}
 		}
 	}
 	fmt.Printf("Execution Phase Completed.\n")
@@ -116,10 +125,18 @@ func (e *Executor) Execute() error {
 	for _, cmd := range e.script.Conclusion {
 		err := e.executeDiligentCmd(cmd)
 		if err != nil {
-			return err
+			if e.continueOnError {
+				fmt.Printf("WARNING: Continuing despite errors\n")
+				errors++
+			} else {
+				return err
+			}
 		}
 	}
 	fmt.Printf("Conclusion Phase Completed.\n")
+	if e.continueOnError && errors > 0 {
+		fmt.Printf("WARNING: %d commands encountered errors during execution\n", errors)
+	}
 	return nil
 }
 

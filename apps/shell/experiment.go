@@ -46,6 +46,7 @@ func init() {
 		Flags: func(f *grumble.Flags) {
 			f.String("v", "values-file", "", "YAML file for values")
 			f.Bool("d", "dry-run", false, "Perform a dry run")
+			f.Bool("e", "continue-on-error", false, "Continue executing the script even if some commands encounter errors")
 		},
 		Args: func(a *grumble.Args) {
 			a.String("script-file", "Script File")
@@ -150,6 +151,7 @@ func expRunScript(c *grumble.Context) error {
 	scriptFileName := c.Args.String("script-file")
 	valuesFileName := c.Flags.String("values-file")
 	dryRun := c.Flags.Bool("dry-run")
+	continueOnError := c.Flags.Bool("continue-on-error")
 
 	script, err := LoadScript(scriptFileName)
 	if err != nil {
@@ -161,7 +163,7 @@ func expRunScript(c *grumble.Context) error {
 		return err
 	}
 
-	executor, err := NewExecutor(script, values, dryRun)
+	executor, err := NewExecutor(script, values, dryRun, continueOnError)
 	if err != nil {
 		return err
 	}

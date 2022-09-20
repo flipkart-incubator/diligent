@@ -351,11 +351,12 @@ func jobAwaitCompletion(c *grumble.Context) error {
 			c.App.Printf("\nJob has failed\n")
 			c.App.Printf("Waiting for cooldown period %s\n", cooldown)
 			time.Sleep(cooldown)
-			return nil
+			return fmt.Errorf("job has failed")
 		case proto.JobState_ENDED_ABORTED:
 			c.App.Printf("\nJob was aborted\n")
 			c.App.Printf("Waiting for cooldown period %s\n", cooldown)
 			time.Sleep(cooldown)
+			return fmt.Errorf("job was aborted")
 			return nil
 		}
 		if ctx.Err() != nil {
