@@ -2,7 +2,7 @@
 
 _diligent | adjective. : characterized by steady, earnest, and energetic effort : painstaking_
 
-Diligent is a tool we created at Flipkart for generating workloads for our SQL databases that enables us to answer specific questions about the performance of a database.
+Diligent is a tool we created at Flipkart for running experiments on our SQL databases so that we can answer specific questions about their performance.
 
 There are several benchmark definitions and benchmarking tools out there such as YCSB, TPCC, HammerDB and more. While these are useful, we had some specific needs at Flipkart for which we needed a good tool:
 
