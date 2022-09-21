@@ -1,4 +1,4 @@
-name: dml-no-txn
+name: dml
 
 info:
     version: 0.0.0

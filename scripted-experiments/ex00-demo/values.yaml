@@ -1,0 +1,8 @@
+env:
+  dbDriver: mysql
+  dbUrl: tester:password@tcp(dbhost:3306)/diligent
+  minionCount: 2
+
+overrides:
+  numRecs: 1000
+  coolDownDuration: 10s

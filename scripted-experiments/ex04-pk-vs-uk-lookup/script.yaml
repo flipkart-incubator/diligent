@@ -1,0 +1,59 @@
+name: pk-vs-uk-lookup
+
+info:
+    version: 0.0.0
+    question: What is the difference in read performance when we read by primary key vs a unique secondary key?
+    description: |
+        We first populate a table which as both a PK index and a UK index.
+        Then we run two jobs. The first job looks up records from the table by PK. The second job looks up records
+        from the table by UK. The difference in performance between the two jobs answers our question.
+
+env:
+    - dbDriver
+    - dbUrl
+    - minionCount
+
+params:
+    numRecs: 100000
+    recSize: 2048
+    concurrency: 5
+    selectDuration: 10m
+    coolDownDuration: 5m
+
+setup:
+    sql:
+        - DROP TABLE IF EXISTS tindexed;
+        - |
+            CREATE TABLE tindexed
+            (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(10240) NOT NULL,
+            PRIMARY KEY (pk),
+            UNIQUE KEY idx_uniq (uniq)
+            );
+
+    diligent:
+        - dataspec create --skip-if-exists --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
+        - minion await-count {{.Env.minionCount}}
+        - job prepare --name j0 --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert tindexed
+        - job run
+        - job await-completion --cooldown {{.Params.coolDownDuration}}
+
+experiment:
+    - experiment begin {{.Name}}
+    - job prepare --name j1 --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.selectDuration}} select-pk tbaseline
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j2 --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} --duration {{.Params.selectDuration}} select-uk tindexed
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - experiment end
+
+conclusion:
+    - report experiment

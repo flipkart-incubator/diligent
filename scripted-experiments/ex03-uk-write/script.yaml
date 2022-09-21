@@ -1,0 +1,69 @@
+name: uk-write
+
+info:
+    version: 0.0.0
+    question: What is the difference in write performance caused by introducing a unique secondary index
+    description: |
+        We run two jobs. First job inserts records into a table with only a PK index. The second job
+        inserts records into a table with a unique secondary index (in addition to the PK index).
+        The difference in performance between the two jobs answers our question.
+
+env:
+    - dbDriver
+    - dbUrl
+    - minionCount
+
+params:
+    numRecs: 100000
+    recSize: 2048
+    concurrency: 5
+    coolDownDuration: 5m
+
+setup:
+    sql:
+        - DROP TABLE IF EXISTS tbaseline;
+        - |
+            CREATE TABLE tbaseline
+            (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(10240) NOT NULL,
+            PRIMARY KEY (pk)
+            );
+        - DROP TABLE IF EXISTS tindexed;
+        - |
+            CREATE TABLE tindexed
+            (
+            pk        varchar(32)    NOT NULL,
+            uniq      varchar(32)    NOT NULL,
+            small_grp varchar(32)    NOT NULL,
+            large_grp varchar(32)    NOT NULL,
+            fixed_val varchar(32)    NOT NULL,
+            seq_num   int            NOT NULL,
+            ts        timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            payload   varchar(10240) NOT NULL,
+            PRIMARY KEY (pk),
+            UNIQUE KEY idx_uniq (uniq)
+            );
+
+    diligent:
+        - dataspec create --skip-if-exists --num-recs {{.Params.numRecs}} --rec-size {{.Params.recSize}} {{.Name}}.data
+        - minion await-count {{.Env.minionCount}}
+
+experiment:
+    - experiment begin {{.Name}}
+    - job prepare --name j1 --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert tbaseline
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - job prepare --name j2 --dataspec-file {{.Name}}.data --db-driver {{.Env.dbDriver}} --db-url {{.Env.dbUrl}} --concurrency {{.Params.concurrency}} insert tindexed
+    - job run
+    - job await-completion --cooldown {{.Params.coolDownDuration}}
+    - experiment end
+
+conclusion:
+    - report experiment
