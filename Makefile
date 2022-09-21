@@ -1,6 +1,6 @@
 # Configure targets
-.PHONY: build-all build-proto build-boss build-minion build-shell clean test docker
-default: build-all
+.PHONY: all proto boss minion shell clean test docker docker-minion docker-shell docker-boss
+default: all
 
 BUILD_DIR:=./build
 BOSS_APP:=$(BUILD_DIR)/boss
@@ -16,14 +16,14 @@ LDFLAGS_COMMON:=$(LDFLAGS_COMMON) -X \"github.com/flipkart-incubator/diligent/pk
 LDFLAGS_COMMON:=$(LDFLAGS_COMMON) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.GoVersion=$(GO_VERSION)\"
 LDFLAGS_COMMON:=$(LDFLAGS_COMMON) -X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.BuildTime=$(BUILD_TIME)\"
 
-build-all: build-proto build-boss build-minion build-shell
+all: proto boss minion shell
 
-build-proto:
+proto:
 	@echo "Building proto..."
 	@cd pkg/proto; sh ./protogen.sh
 	@echo "Done"
 
-build-boss:
+boss:
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-boss\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building boss..."
@@ -31,7 +31,7 @@ build-boss:
 	@go build -o $(BOSS_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/boss
 	@echo "Done"
 
-build-minion:
+minion:
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-minion\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building minion..."
@@ -39,7 +39,7 @@ build-minion:
 	@go build -o $(MINION_APP) -ldflags="$(LDFLAGS)" github.com/flipkart-incubator/diligent/apps/minion
 	@echo "Done"
 
-build-shell:
+shell:
 	$(eval LDFLAGS_AV:=-X \"github.com/flipkart-incubator/diligent/pkg/buildinfo.AppName=diligent-shell\")
 	$(eval LDFLAGS:=$(LDFLAGS_COMMON) $(LDFLAGS_AV))
 	@echo "Building shell..."
@@ -58,13 +58,13 @@ test:
 	@go test ./...
 	@echo "Done"
 
-# docker-minion:
-#     @docker build . -f Minion.Dockerfile -t diligent-minion:latest
-#
-# docker-boss:
-#     @docker build . -f Boss.Dockerfile -t diligent-boss:latest
-#
-# docker-shell:
-#     @docker build . -f Shell.Dockerfile -t diligent-shell:latest
-#
-# docker: docker-minion docker-shell docker-boss
+docker-minion:
+	@docker build . -f Minion.Dockerfile -t diligent-minion:latest
+
+docker-boss:
+	@docker build . -f Boss.Dockerfile -t diligent-boss:latest
+
+docker-shell:
+	@docker build . -f Shell.Dockerfile -t diligent-shell:latest
+
+docker: docker-minion docker-shell docker-boss

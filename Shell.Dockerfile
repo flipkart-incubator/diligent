@@ -5,7 +5,7 @@ COPY go.mod go.sum Makefile ./
 RUN go mod download
 COPY apps ./apps
 COPY pkg ./pkg
-RUN make build-shell
+RUN make shell
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
