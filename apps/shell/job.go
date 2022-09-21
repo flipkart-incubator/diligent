@@ -13,7 +13,7 @@ import (
 func init() {
 	jobCmd := &grumble.Command{
 		Name:    "job",
-		Help:    "work with the jobs",
+		Help:    "work with jobs",
 		Aliases: []string{"jo"},
 	}
 	grumbleApp.AddCommand(jobCmd)

@@ -12,7 +12,7 @@ import (
 func init() {
 	minionCmd := &grumble.Command{
 		Name:    "minion",
-		Help:    "work with the minions",
+		Help:    "work with minions",
 		Aliases: []string{"mi"},
 	}
 	grumbleApp.AddCommand(minionCmd)
