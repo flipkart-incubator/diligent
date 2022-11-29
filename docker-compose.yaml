@@ -29,6 +29,8 @@ services:
       context: .
       dockerfile: Minion.Dockerfile
     image: diligent/minion:latest
+    ports:
+      - "5790:9090"
     command: ["/diligent/minion", "--boss", "boss", "--advertise-addr", "minion0", "--log-level", "info"]
     networks:
       - diligent
@@ -38,6 +40,8 @@ services:
       context: .
       dockerfile: Minion.Dockerfile
     image: diligent/minion:latest
+    ports:
+      - "5791:9090"
     command: ["/diligent/minion", "--boss", "boss", "--advertise-addr", "minion1", "--log-level", "info"]
     networks:
       - diligent

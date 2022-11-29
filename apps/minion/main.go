@@ -5,6 +5,7 @@ import (
 	"github.com/flipkart-incubator/diligent/pkg/buildinfo"
 	log "github.com/sirupsen/logrus"
 	"net"
+	_ "net/http/pprof"
 )
 
 const (
