@@ -8,7 +8,7 @@ import (
 )
 
 func TestDataSet(t *testing.T) {
-	dgSpec := NewSpec(1000, 1024)
+	dgSpec := NewSpec(1000, 1024, false)
 	kg := keygen.NewLeveledKeyGen(dgSpec.KeyGenSpec)
 	dg := NewDataGen(dgSpec)
 	assert.Equal(t, kg.NumKeys(), dg.NumRecords())
@@ -16,7 +16,7 @@ func TestDataSet(t *testing.T) {
 }
 
 func TestRecs(t *testing.T) {
-	dgSpec := NewSpec(1000, 1024)
+	dgSpec := NewSpec(1000, 1024, false)
 	dg := NewDataGen(dgSpec)
 	r0 := dg.Record(0)
 	r1 := dg.Record(1)

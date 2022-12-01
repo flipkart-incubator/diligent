@@ -20,6 +20,7 @@ message DataSpec {
   TrSpec small_grp_tr_spec = 6;
   TrSpec large_grp_tr_spec = 7;
   string fixed_value = 8;
+  bool reuse_payload = 9;
 }
 
 // Summary info of a data spec

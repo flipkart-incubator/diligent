@@ -35,9 +35,10 @@ type Spec struct {
 	SmallGrpTrSpec *strtr.Spec
 	LargeGrpTrSpec *strtr.Spec
 	FixedValue     string
+	ReusePayload   bool
 }
 
-func NewSpec(recordCount int, recordSize int) *Spec {
+func NewSpec(recordCount int, recordSize int, reusePayload bool) *Spec {
 	numSubKeysPerLevel := computeNumSubKeysPerLevel(recordCount)
 
 	kgSpec := keygen.NewRandomLeveledKeyGenSpec(numSubKeysPerLevel, 5)
@@ -52,6 +53,7 @@ func NewSpec(recordCount int, recordSize int) *Spec {
 		SmallGrpTrSpec: strtr.NewRandomTrSpec(charset.AlphaUp),
 		LargeGrpTrSpec: strtr.NewRandomTrSpec(charset.AlphaUp),
 		FixedValue:     strGen.RandomString(kgSpec.KeyLength()),
+		ReusePayload:   reusePayload,
 	}
 
 	return ds

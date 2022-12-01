@@ -22,7 +22,8 @@ func init() {
 		Flags: func(f *grumble.Flags) {
 			f.Int("n", "num-recs", 10, "Number of records")
 			f.Int("s", "rec-size", 1024, "Approx size of each record")
-			f.Bool("k", "skip-if-exists", false, "Reuse if a data spec file with same name and params exists")
+			f.Bool("", "reuse-payload", false, "Reuse the same payload for every record")
+			f.Bool("", "skip-if-exists", false, "Reuse if a data spec file with same name and params exists")
 		},
 		Args: func(a *grumble.Args) {
 			a.String("name", "a name for the dataspec")
@@ -52,6 +53,7 @@ func dsCreate(c *grumble.Context) error {
 	}
 	numRecs := c.Flags.Int("num-recs")
 	recSize := c.Flags.Int("rec-size")
+	reusePayload := c.Flags.Bool("reuse-payload")
 	skipIfExists := c.Flags.Bool("skip-if-exists")
 	tryCreate := true
 
@@ -79,7 +81,7 @@ func dsCreate(c *grumble.Context) error {
 		c.App.Println("num-recs:", numRecs)
 		c.App.Println("rec-size:", recSize)
 
-		spec := datagen.NewSpec(numRecs, recSize)
+		spec := datagen.NewSpec(numRecs, recSize, reusePayload)
 		err := spec.SaveToFile(name)
 		if err != nil {
 			return err

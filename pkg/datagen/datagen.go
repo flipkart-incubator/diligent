@@ -24,15 +24,17 @@ type Record struct {
 
 // DataGen can generate a bunch of data of type Record
 type DataGen struct {
-	recordSize  int
-	payloadSize int
-	keyGen      *keygen.LeveledKeyGen
-	uniqTr      *strtr.Tr
-	smallGrpTr  *strtr.Tr
-	largeGrpTr  *strtr.Tr
-	fixedValue  string
-	seqGen      *atomic.Int64
-	payloadGen  *strgen.StrGen
+	recordSize   int
+	payloadSize  int
+	keyGen       *keygen.LeveledKeyGen
+	uniqTr       *strtr.Tr
+	smallGrpTr   *strtr.Tr
+	largeGrpTr   *strtr.Tr
+	fixedValue   string
+	seqGen       *atomic.Int64
+	payloadGen   *strgen.StrGen
+	reusePayload bool
+	payload      string
 }
 
 func NewDataGen(spec *Spec) *DataGen {
@@ -49,17 +51,23 @@ func NewDataGen(spec *Spec) *DataGen {
 
 	payloadSize := int(math.Max(float64(spec.RecordSize-nonPayloadSize), 1))
 
-	return &DataGen{
-		recordSize:  spec.RecordSize,
-		payloadSize: payloadSize,
-		keyGen:      keygen.NewLeveledKeyGen(spec.KeyGenSpec),
-		uniqTr:      strtr.NewTr(spec.UniqTrSpec),
-		smallGrpTr:  strtr.NewTr(spec.SmallGrpTrSpec),
-		largeGrpTr:  strtr.NewTr(spec.LargeGrpTrSpec),
-		fixedValue:  spec.FixedValue,
-		seqGen:      atomic.NewInt64(0),
-		payloadGen:  strgen.NewStrGen(charset.AlphaUp),
+	dg := &DataGen{
+		recordSize:   spec.RecordSize,
+		payloadSize:  payloadSize,
+		keyGen:       keygen.NewLeveledKeyGen(spec.KeyGenSpec),
+		uniqTr:       strtr.NewTr(spec.UniqTrSpec),
+		smallGrpTr:   strtr.NewTr(spec.SmallGrpTrSpec),
+		largeGrpTr:   strtr.NewTr(spec.LargeGrpTrSpec),
+		fixedValue:   spec.FixedValue,
+		seqGen:       atomic.NewInt64(0),
+		payloadGen:   strgen.NewStrGen(charset.AlphaUp),
+		reusePayload: spec.ReusePayload,
 	}
+	if dg.reusePayload {
+		dg.payload = dg.payloadGen.RandomString(dg.payloadSize)
+	}
+
+	return dg
 }
 
 func (dg *DataGen) NumRecords() int {
@@ -87,7 +95,11 @@ func (dg *DataGen) FixedValue() string {
 }
 
 func (dg *DataGen) RandomPayload() string {
-	return dg.payloadGen.RandomString(dg.payloadSize)
+	if dg.reusePayload {
+		return dg.payload
+	} else {
+		return dg.payloadGen.RandomString(dg.payloadSize)
+	}
 }
 
 func (dg *DataGen) Record(n int) *Record {
@@ -100,6 +112,6 @@ func (dg *DataGen) Record(n int) *Record {
 		FixedValue: dg.fixedValue,
 		SeqNum:     dg.seqGen.Inc(),
 		TimeStamp:  time.Now().Unix(),
-		Payload:    dg.payloadGen.RandomString(dg.payloadSize),
+		Payload:    dg.RandomPayload(),
 	}
 }

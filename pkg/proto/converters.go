@@ -18,6 +18,7 @@ func DataSpecToProto(spec *datagen.Spec) *DataSpec {
 		SmallGrpTrSpec: TrSpecToProto(spec.SmallGrpTrSpec),
 		LargeGrpTrSpec: TrSpecToProto(spec.LargeGrpTrSpec),
 		FixedValue:     spec.FixedValue,
+		ReusePayload:   spec.ReusePayload,
 	}
 }
 
@@ -31,6 +32,7 @@ func DataSpecFromProto(protoSpec *DataSpec) *datagen.Spec {
 		SmallGrpTrSpec: TrSpecFromProto(protoSpec.GetSmallGrpTrSpec()),
 		LargeGrpTrSpec: TrSpecFromProto(protoSpec.GetLargeGrpTrSpec()),
 		FixedValue:     protoSpec.GetFixedValue(),
+		ReusePayload:   protoSpec.GetReusePayload(),
 	}
 }
 
